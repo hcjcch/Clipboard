@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C86577ED2F03F85900D8930E /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C86577EC2F03F85900D8930E /* SQLite */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C86577B62F03F26100D8930E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C86577ED2F03F85900D8930E /* SQLite in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = Clipboard;
 			packageProductDependencies = (
+				C86577EC2F03F85900D8930E /* SQLite */,
 			);
 			productName = Clipboard;
 			productReference = C86577A72F03F26000D8930E /* Clipboard.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = C865779E2F03F26000D8930E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C86577EB2F03F56F00D8930E /* XCRemoteSwiftPackageReference "SQLite" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C86577A82F03F26000D8930E /* Products */;
 			projectDirPath = "";
@@ -398,6 +407,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "需要辅助功能权限以使用全局快捷键";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -423,6 +433,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "需要辅助功能权限以使用全局快捷键";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -541,6 +552,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C86577EB2F03F56F00D8930E /* XCRemoteSwiftPackageReference "SQLite" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stephencelis/SQLite.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.15.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C86577EC2F03F85900D8930E /* SQLite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C86577EB2F03F56F00D8930E /* XCRemoteSwiftPackageReference "SQLite" */;
+			productName = SQLite;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C865779F2F03F26000D8930E /* Project object */;
 }
