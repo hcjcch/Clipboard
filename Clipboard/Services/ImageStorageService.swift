@@ -104,17 +104,70 @@ actor ImageStorageService {
         return pngData
     }
 
+    /// 从文件 URL 生成缩略图
+    func generateThumbnail(from fileURL: URL) async -> Data? {
+        guard let nsImage = NSImage(contentsOf: fileURL) else {
+            print("无法加载图片文件: \(fileURL.path)")
+            return nil
+        }
+
+        // 使用现有的缩略图生成方法，目标尺寸 60x60
+        let maxSize: CGFloat = 60
+
+        // 计算缩略图尺寸（保持宽高比）
+        let originalSize = nsImage.size
+        let ratio = min(maxSize / originalSize.width, maxSize / originalSize.height)
+
+        guard ratio > 0 else {
+            return nil
+        }
+
+        let newSize = NSSize(
+            width: originalSize.width * ratio,
+            height: originalSize.height * ratio
+        )
+
+        // 创建缩略图
+        let thumbnail = NSImage(size: newSize)
+        thumbnail.lockFocus()
+        nsImage.draw(
+            in: NSRect(origin: .zero, size: newSize),
+            from: NSRect(origin: .zero, size: originalSize),
+            operation: .copy,
+            fraction: 1.0
+        )
+        thumbnail.unlockFocus()
+
+        // 转换为 PNG 数据
+        guard let tiffData = thumbnail.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let pngData = bitmap.representation(using: .png, properties: [:]) else {
+            return nil
+        }
+
+        print("已生成图片文件缩略图: \(fileURL.lastPathComponent) -> \(pngData.count) bytes")
+        return pngData
+    }
+
     /// 清理所有图片（用于重置）
     func clearAllImages() {
         let fileManager = FileManager.default
 
-        try? fileManager.removeItem(at: imagesDirectory)
-        try? fileManager.removeItem(at: thumbnailsDirectory)
-
-        try? fileManager.createDirectory(at: imagesDirectory, withIntermediateDirectories: true)
-        try? fileManager.createDirectory(at: thumbnailsDirectory, withIntermediateDirectories: true)
-
-        print("所有图片已清理")
+        do {
+            if fileManager.fileExists(atPath: imagesDirectory.path) {
+                try fileManager.removeItem(at: imagesDirectory)
+            }
+            if fileManager.fileExists(atPath: thumbnailsDirectory.path) {
+                try fileManager.removeItem(at: thumbnailsDirectory)
+            }
+            
+            try fileManager.createDirectory(at: imagesDirectory, withIntermediateDirectories: true)
+            try fileManager.createDirectory(at: thumbnailsDirectory, withIntermediateDirectories: true)
+            
+            print("所有图片已清理")
+        } catch {
+            print("清理图片失败: \(error.localizedDescription)")
+        }
     }
 
     /// 获取图片文件大小（字节）

@@ -131,22 +131,47 @@ struct ClipboardItemRowView: View {
 
             case .file:
                 VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                    // 文件预览
-                    HStack(spacing: DesignSystem.Spacing.xs) {
-                        Image(systemName: "doc.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.accentColor)
+                    // 检查是否为图片文件（有缩略图）
+                    if let thumbnailData = viewModel.item.thumbnailData,
+                       let nsImage = NSImage(data: thumbnailData) {
+                        // 显示图片缩略图
+                        HStack(spacing: DesignSystem.Spacing.xs) {
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 40, height: 40)
+                                .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm))
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(URL(fileURLWithPath: viewModel.item.content).lastPathComponent)
-                                .font(.system(size: 13))
-                                .foregroundStyle(DesignSystem.Colors.textPrimary)
-                                .lineLimit(1)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(URL(fileURLWithPath: viewModel.item.content).lastPathComponent)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(DesignSystem.Colors.textPrimary)
+                                    .lineLimit(1)
 
-                            Text(URL(fileURLWithPath: viewModel.item.content).deletingLastPathComponent().path)
-                                .font(.system(size: 11))
-                                .foregroundStyle(DesignSystem.Colors.textTertiary)
-                                .lineLimit(1)
+                                Text(URL(fileURLWithPath: viewModel.item.content).deletingLastPathComponent().path)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    } else {
+                        // 普通文件，显示图标
+                        HStack(spacing: DesignSystem.Spacing.xs) {
+                            Image(systemName: "doc.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.accentColor)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(URL(fileURLWithPath: viewModel.item.content).lastPathComponent)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(DesignSystem.Colors.textPrimary)
+                                    .lineLimit(1)
+
+                                Text(URL(fileURLWithPath: viewModel.item.content).deletingLastPathComponent().path)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(DesignSystem.Colors.textTertiary)
+                                    .lineLimit(1)
+                            }
                         }
                     }
 

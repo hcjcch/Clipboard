@@ -13,6 +13,7 @@ class ClipboardWindowManager: ObservableObject {
     static let shared = ClipboardWindowManager()
 
     @Published var isWindowVisible: Bool = false
+    var isShowingAlert = false  // 标记是否正在显示 alert
 
     private var window: NSWindow?
 
@@ -70,13 +71,16 @@ class ClipboardWindowManager: ObservableObject {
         // 设置窗口级别
         newWindow.level = .floating
 
-        // 失去焦点时自动隐藏
+        // 失去焦点时自动隐藏（但不在显示 alert 时）
         NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: newWindow,
             queue: .main
         ) { [weak self] _ in
-            self?.hideWindow()
+            // 只有在没有显示 alert 时才隐藏窗口
+            if !(self?.isShowingAlert ?? false) {
+                self?.hideWindow()
+            }
         }
 
         window = newWindow
@@ -145,16 +149,6 @@ struct ClipboardHistoryContentView: View {
             }
             .buttonStyle(.plain)
             .help("清空历史")
-            .alert("清空剪贴板历史", isPresented: $showClearConfirm) {
-                Button("取消", role: .cancel) { }
-                Button("清空", role: .destructive) {
-                    Task {
-                        await viewModel.clearAll()
-                    }
-                }
-            } message: {
-                Text("确定要清空所有剪贴板历史记录吗？此操作不可撤销。")
-            }
 
             // 快捷键提示
             HStack(spacing: DesignSystem.Spacing.xs) {
@@ -202,6 +196,19 @@ struct ClipboardHistoryContentView: View {
                     .frame(maxHeight: .infinity, alignment: .bottom)
             }
         )
+        .alert("清空剪贴板历史", isPresented: $showClearConfirm) {
+            Button("取消", role: .cancel) { }
+            Button("清空", role: .destructive) {
+                Task {
+                    await viewModel.clearAll()
+                }
+            }
+        } message: {
+            Text("确定要清空所有剪贴板历史记录吗？此操作不可撤销。")
+        }
+        .onChange(of: showClearConfirm) { _, newValue in
+            ClipboardWindowManager.shared.isShowingAlert = newValue
+        }
     }
 }
 

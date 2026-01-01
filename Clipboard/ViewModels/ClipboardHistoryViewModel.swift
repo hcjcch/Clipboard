@@ -92,12 +92,17 @@ class ClipboardHistoryViewModel: ObservableObject {
 
     /// 清空所有
     func clearAll() async {
+        isLoading = true
+        errorMessage = nil
+        
         do {
             try await DatabaseService.shared.clearAll()
             items = []
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = "清空失败: \(error.localizedDescription)"
         }
+        
+        isLoading = false
     }
 
     /// 过滤后的项

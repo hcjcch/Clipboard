@@ -42,10 +42,21 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
         if let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
            !fileURLs.isEmpty,
            let firstURL = fileURLs.first {
-            let fileNames = fileURLs.map { $0.lastPathComponent }.joined(separator: ", ")
+            // 检查是否为图片文件
+            let imageExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "heic", "heif"]
+            let fileExtension = firstURL.pathExtension.lowercased()
+            let isImageFile = imageExtensions.contains(fileExtension)
+
+            // 如果是图片文件，生成缩略图
+            var thumbnailData: Data?
+            if isImageFile {
+                thumbnailData = await generateThumbnail(for: firstURL)
+            }
+
             return ClipboardItem(
                 content: firstURL.path,
-                type: .file
+                type: .file,
+                thumbnailData: thumbnailData
             )
         }
 
@@ -78,7 +89,8 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
            let firstURL = fileURLs.first {
             return ClipboardItem(
                 content: firstURL.path,
-                type: .file
+                type: .file,
+                thumbnailData: nil
             )
         }
 
@@ -97,6 +109,11 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
         }
 
         return nil
+    }
+
+    /// 生成图片文件的缩略图
+    private static func generateThumbnail(for fileURL: URL) async -> Data? {
+        return await ImageStorageService.shared.generateThumbnail(from: fileURL)
     }
 
     /// 获取预览文本（用于显示）

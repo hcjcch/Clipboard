@@ -212,18 +212,20 @@ actor DatabaseService {
             throw DatabaseError.connectionFailed("数据库未初始化")
         }
 
-        // 先获取所有项，删除关联的图片文件
-        let allItems = try fetchAll()
-        for item in allItems {
-            if let imageId = item.imagePath {
-                await ImageStorageService.shared.deleteImage(imageId: imageId)
-            }
+        // 1. 清理图片文件 (即使失败也不应该阻止数据库记录的删除)
+        await ImageStorageService.shared.clearAllImages()
+
+        // 2. 删除数据库记录
+        do {
+            // 使用 delete() 删除所有行
+            let count = try db.run(items.delete())
+            print("已从数据库删除 \(count) 条记录")
+        } catch {
+            print("清空数据库失败: \(error.localizedDescription)")
+            throw DatabaseError.deletionFailed(error.localizedDescription)
         }
-
-        // 删除数据库记录
-        try db.run(items.delete())
-
-        print("已清空所有剪贴板历史和图片文件")
+        
+        print("已执行清空所有剪贴板历史操作")
     }
 
     /// 清理旧数据，保持最大条目数限制
