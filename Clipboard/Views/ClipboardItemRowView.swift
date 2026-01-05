@@ -14,6 +14,10 @@ struct ClipboardItemRowView: View {
     @State private var isDeleting = false
     @State private var imageData: Data?
 
+    // 键盘导航状态
+    var isSelected: Bool = false
+    var isKeyboardNavigating: Bool = false
+
     var body: some View {
         HStack(spacing: DesignSystem.Spacing.md) {
             // 图标/缩略图
@@ -31,22 +35,22 @@ struct ClipboardItemRowView: View {
         .padding(.vertical, DesignSystem.Spacing.sm)
         .background(
             ZStack {
-                // 悬停背景
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                    .fill(
-                        isHovering
-                            ? Color.accentColor.opacity(0.08)
-                            : Color.clear
-                    )
+                // 键盘选中背景（优先级最高）
+                if isSelected && isKeyboardNavigating {
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                        .fill(Color.accentColor.opacity(0.15))
 
-                // 边框
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                    .stroke(
-                        isHovering
-                            ? Color.accentColor.opacity(0.2)
-                            : Color.clear,
-                        lineWidth: 1
-                    )
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                        .stroke(Color.accentColor, lineWidth: 1.5)
+                }
+                // 鼠标悬停背景（只在非键盘导航时显示）
+                else if isHovering {
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                        .fill(Color.accentColor.opacity(0.08))
+
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                        .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
+                }
             }
         )
         .offset(x: isDeleting ? 400 : 0)
@@ -54,6 +58,9 @@ struct ClipboardItemRowView: View {
         .scaleEffect(isPressed ? 0.98 : 1.0)
         .contentShape(Rectangle())
         .onHover { hovering in
+            // 键盘导航时禁用鼠标悬停效果
+            guard !isKeyboardNavigating else { return }
+
             withAnimation(DesignSystem.Animation.quick) {
                 isHovering = hovering
             }
@@ -322,6 +329,7 @@ struct ClipboardItemRowView: View {
 
 #Preview {
     VStack(spacing: 8) {
+        // 键盘选中状态
         ClipboardItemRowView(
             viewModel: ClipboardItemViewModel(
                 item: ClipboardItem(
@@ -330,15 +338,30 @@ struct ClipboardItemRowView: View {
                 ),
                 onDelete: {},
                 searchKeyword: "示例"
-            )
+            ),
+            isSelected: true,
+            isKeyboardNavigating: true
         )
 
+        // 鼠标悬停状态
         ClipboardItemRowView(
             viewModel: ClipboardItemViewModel(
                 item: ClipboardItem(
                     content: "<image>",
                     type: .image,
                     thumbnailData: nil
+                ),
+                onDelete: {},
+                searchKeyword: ""
+            )
+        )
+
+        // 普通状态
+        ClipboardItemRowView(
+            viewModel: ClipboardItemViewModel(
+                item: ClipboardItem(
+                    content: "另一段示例文本",
+                    type: .text
                 ),
                 onDelete: {},
                 searchKeyword: ""

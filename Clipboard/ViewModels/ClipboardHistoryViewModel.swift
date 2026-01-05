@@ -13,13 +13,19 @@ class ClipboardHistoryViewModel: ObservableObject {
 
     @Published var items: [ClipboardItem] = []
     @Published var searchText: String = ""
+    @Published var filteredItems: [ClipboardItem] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+
+    // 键盘导航状态
+    @Published var selectedItemIndex: Int? = nil
+    @Published var isKeyboardNavigating: Bool = false
 
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
         setupNotifications()
+        setupSearchDebounce()
         loadItems()
     }
 
@@ -34,6 +40,38 @@ class ClipboardHistoryViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
+    /// 设置搜索防抖
+    private func setupSearchDebounce() {
+        // 监听 searchText 变化，延迟 150ms 后执行搜索
+        $searchText
+            .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
+            .sink { [weak self] searchText in
+                self?.performSearch()
+                // 搜索时重置选中状态
+                self?.resetSelection()
+            }
+            .store(in: &cancellables)
+    }
+
+    /// 执行搜索（更新 filteredItems）
+    private func performSearch() {
+        if searchText.isEmpty {
+            filteredItems = items
+            return
+        }
+
+        // 使用模糊匹配，并按匹配度排序
+        let matchedItems = items.compactMap { item -> (ClipboardItem, Double)? in
+            let result = FuzzyMatcher.match(item.content, keyword: searchText)
+            return result.matched ? (item, result.score) : nil
+        }
+
+        // 按得分降序排序
+        filteredItems = matchedItems
+            .sorted { $0.1 > $1.1 }
+            .map { $0.0 }
+    }
+
     /// 加载剪贴板历史
     func loadItems() {
         isLoading = true
@@ -43,6 +81,10 @@ class ClipboardHistoryViewModel: ObservableObject {
             do {
                 let fetchedItems = try await DatabaseService.shared.fetchAll()
                 self.items = fetchedItems
+                // 如果搜索框为空，更新 filteredItems
+                if searchText.isEmpty {
+                    self.filteredItems = fetchedItems
+                }
                 self.isLoading = false
             } catch {
                 self.errorMessage = error.localizedDescription
@@ -94,33 +136,64 @@ class ClipboardHistoryViewModel: ObservableObject {
     func clearAll() async {
         isLoading = true
         errorMessage = nil
-        
+
         do {
             try await DatabaseService.shared.clearAll()
             items = []
+            filteredItems = []
         } catch {
             errorMessage = "清空失败: \(error.localizedDescription)"
         }
-        
+
         isLoading = false
     }
 
-    /// 过滤后的项（使用模糊匹配）
-    var filteredItems: [ClipboardItem] {
-        if searchText.isEmpty {
-            return items
-        }
+    // MARK: - 键盘导航
 
-        // 使用模糊匹配，并按匹配度排序
-        let matchedItems = items.compactMap { item -> (ClipboardItem, Double)? in
-            let result = FuzzyMatcher.match(item.content, keyword: searchText)
-            return result.matched ? (item, result.score) : nil
-        }
+    /// 向上移动选中项
+    func moveSelectionUp() {
+        guard !filteredItems.isEmpty else { return }
 
-        // 按得分降序排序
-        return matchedItems
-            .sorted { $0.1 > $1.1 }
-            .map { $0.0 }
+        if let currentIndex = selectedItemIndex {
+            // 向上移动，最小为 0
+            selectedItemIndex = max(0, currentIndex - 1)
+        } else {
+            // 首次导航，选中最后一个（符合 macOS 习惯）
+            selectedItemIndex = filteredItems.count - 1
+        }
+        isKeyboardNavigating = true
+    }
+
+    /// 向下移动选中项
+    func moveSelectionDown() {
+        guard !filteredItems.isEmpty else { return }
+
+        if let currentIndex = selectedItemIndex {
+            // 向下移动，最大为 count - 1
+            selectedItemIndex = min(filteredItems.count - 1, currentIndex + 1)
+        } else {
+            // 首次导航，选中第一个
+            selectedItemIndex = 0
+        }
+        isKeyboardNavigating = true
+    }
+
+    /// 确认选择（复制并关闭窗口）
+    func confirmSelection() {
+        guard let index = selectedItemIndex,
+              index < filteredItems.count else { return }
+
+        let selectedItem = filteredItems[index]
+        selectItem(selectedItem)
+
+        // 复制后隐藏窗口
+        ClipboardWindowManager.shared.hideWindow()
+    }
+
+    /// 重置选中状态
+    func resetSelection() {
+        selectedItemIndex = nil
+        isKeyboardNavigating = false
     }
 }
 

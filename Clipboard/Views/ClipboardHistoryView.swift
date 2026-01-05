@@ -143,18 +143,33 @@ struct ClipboardHistoryView: View {
 
     private var itemsList: some View {
         ScrollView {
-            LazyVStack(spacing: 4) {
-                ForEach(viewModel.filteredItems) { item in
-                    ClipboardItemRowView(
-                        viewModel: ClipboardItemViewModel(
-                            item: item,
-                            onDelete: { loadItems() },
-                            searchKeyword: viewModel.searchText
+            ScrollViewReader { proxy in
+                LazyVStack(spacing: 4) {
+                    ForEach(Array(viewModel.filteredItems.enumerated()), id: \.element.id) { index, item in
+                        ClipboardItemRowView(
+                            viewModel: ClipboardItemViewModel(
+                                item: item,
+                                onDelete: { loadItems() },
+                                searchKeyword: viewModel.searchText
+                            ),
+                            isSelected: viewModel.selectedItemIndex == index,
+                            isKeyboardNavigating: viewModel.isKeyboardNavigating
                         )
-                    )
+                        .id(item.id)  // 用于滚动定位
+                    }
+                }
+                .padding(8)
+                .onChange(of: viewModel.selectedItemIndex) { _, newIndex in
+                    // 滚动到选中项
+                    guard let index = newIndex,
+                          index < viewModel.filteredItems.count else { return }
+
+                    let selectedItem = viewModel.filteredItems[index]
+                    withAnimation(DesignSystem.Animation.quick) {
+                        proxy.scrollTo(selectedItem.id, anchor: .center)
+                    }
                 }
             }
-            .padding(8)
         }
     }
 

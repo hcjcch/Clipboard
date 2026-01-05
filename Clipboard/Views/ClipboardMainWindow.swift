@@ -122,7 +122,7 @@ class ClipboardWindowManager: ObservableObject {
         }
     }
 
-    /// 处理键盘事件
+    /// 处理键盘事件（只处理特殊功能键，文本输入交给 HiddenInputField 处理）
     private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
         guard isWindowVisible else { return event }
 
@@ -133,6 +133,9 @@ class ClipboardWindowManager: ObservableObject {
         if keyCode == 53 { // ESC
             if !vm.searchText.isEmpty {
                 vm.searchText = ""
+                vm.resetSelection()  // 重置选中状态
+                // 同时清空 HiddenInputField
+                NotificationCenter.default.post(name: .init("ClearHiddenInputField"), object: nil)
                 return nil // 消费事件
             } else {
                 hideWindow()
@@ -140,57 +143,26 @@ class ClipboardWindowManager: ObservableObject {
             }
         }
 
-        // Backspace: 删除字符
-        if keyCode == 51 { // Backspace
-            if !vm.searchText.isEmpty {
-                vm.searchText.removeLast()
-            }
+        // 上箭头: 上移选择
+        if keyCode == 126 { // Up Arrow
+            vm.moveSelectionUp()
+            return nil  // 消费事件，阻止文本输入
+        }
+
+        // 下箭头: 下移选择
+        if keyCode == 125 { // Down Arrow
+            vm.moveSelectionDown()
             return nil
         }
 
-        // 可打印字符: 添加到搜索
-        if isPrintableCharacter(event), let char = event.characters {
-            vm.searchText.append(char)
-            return nil // 消费事件，避免系统处理
+        // 回车: 确认选择
+        if keyCode == 36 { // Enter
+            vm.confirmSelection()
+            return nil
         }
 
-        return event // 其他事件不处理
-    }
-
-    /// 判断是否为可打印字符
-    private func isPrintableCharacter(_ event: NSEvent) -> Bool {
-        let keyCode = event.keyCode
-
-        // 排除功能键
-        let functionKeys: Set<UInt16> = [
-            53,   // ESC
-            36,   // Enter
-            48,   // Tab
-            51,   // Backspace
-            117,  // Delete
-            123, 124, 125, 126, // 方向键
-        ]
-
-        if functionKeys.contains(keyCode) {
-            return false
-        }
-
-        // 检查修饰键（排除 Shift）
-        let modifiers = event.modifierFlags
-        let hasCommand = modifiers.contains(.command)
-        let hasControl = modifiers.contains(.control)
-        let hasOption = modifiers.contains(.option)
-
-        if hasCommand || hasControl || hasOption {
-            return false
-        }
-
-        // 检查字符
-        if let characters = event.characters, !characters.isEmpty {
-            return true
-        }
-
-        return false
+        // 其他事件交给 HiddenInputField 处理（包括输入法、Backspace 等）
+        return event
     }
 }
 
@@ -217,6 +189,14 @@ struct ClipboardHistoryContentView: View {
                 itemCount: viewModel.filteredItems.count
             )
             .padding(12)
+
+            // 隐藏输入框（用于支持输入法）
+            HiddenInputField(
+                text: $viewModel.searchText
+            )
+            .frame(width: 1, height: 1)
+            .opacity(0)
+            .accessibility(hidden: true)
         }
     }
 
