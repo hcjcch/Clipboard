@@ -112,7 +112,7 @@ struct ClipboardItemRowView: View {
             switch viewModel.item.type {
             case .text:
                 VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
-                    Text(viewModel.previewText)
+                    Text(viewModel.highlightedPreview)
                         .font(.system(size: 13, weight: .regular))
                         .lineLimit(2)
                         .foregroundStyle(DesignSystem.Colors.textPrimary)
@@ -328,7 +328,8 @@ struct ClipboardItemRowView: View {
                     content: "这是一段示例文本，用于展示剪贴板项的预览效果。",
                     type: .text
                 ),
-                onDelete: {}
+                onDelete: {},
+                searchKeyword: "示例"
             )
         )
 
@@ -339,7 +340,8 @@ struct ClipboardItemRowView: View {
                     type: .image,
                     thumbnailData: nil
                 ),
-                onDelete: {}
+                onDelete: {},
+                searchKeyword: ""
             )
         )
     }

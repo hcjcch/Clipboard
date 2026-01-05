@@ -105,12 +105,22 @@ class ClipboardHistoryViewModel: ObservableObject {
         isLoading = false
     }
 
-    /// 过滤后的项
+    /// 过滤后的项（使用模糊匹配）
     var filteredItems: [ClipboardItem] {
         if searchText.isEmpty {
             return items
         }
-        return items.filter { $0.content.localizedCaseInsensitiveContains(searchText) }
+
+        // 使用模糊匹配，并按匹配度排序
+        let matchedItems = items.compactMap { item -> (ClipboardItem, Double)? in
+            let result = FuzzyMatcher.match(item.content, keyword: searchText)
+            return result.matched ? (item, result.score) : nil
+        }
+
+        // 按得分降序排序
+        return matchedItems
+            .sorted { $0.1 > $1.1 }
+            .map { $0.0 }
     }
 }
 

@@ -6,15 +6,18 @@
 //
 
 import Foundation
+import SwiftUI
 
 @MainActor
 class ClipboardItemViewModel: ObservableObject {
     let item: ClipboardItem
     private let onDelete: () -> Void
+    let searchKeyword: String
 
-    init(item: ClipboardItem, onDelete: @escaping () -> Void) {
+    init(item: ClipboardItem, onDelete: @escaping () -> Void, searchKeyword: String = "") {
         self.item = item
         self.onDelete = onDelete
+        self.searchKeyword = searchKeyword
     }
 
     /// 复制到剪贴板
@@ -45,5 +48,14 @@ class ClipboardItemViewModel: ObservableObject {
     /// 预览文本
     var previewText: String {
         item.previewText
+    }
+
+    /// 高亮预览文本
+    var highlightedPreview: AttributedString {
+        TextHighlighter.highlightedPreview(
+            item.content,
+            keyword: searchKeyword,
+            maxLength: 200
+        )
     }
 }

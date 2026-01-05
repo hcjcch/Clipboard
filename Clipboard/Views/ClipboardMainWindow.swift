@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 /// 剪贴板历史窗口管理器
 @MainActor
@@ -15,24 +16,31 @@ class ClipboardWindowManager: ObservableObject {
     @Published var isWindowVisible: Bool = false
     var isShowingAlert = false  // 标记是否正在显示 alert
 
-    private var window: NSWindow?
+    private var panel: NSPanel?
+    private var keyEventHandler: Any?
 
     private init() {}
 
     /// 显示窗口
     func showWindow() {
-        if let existingWindow = window {
-            existingWindow.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+        if let existingPanel = panel {
+            // 让面板成为 key window，这样失去焦点时会触发通知
+            existingPanel.makeKeyAndOrderFront(nil)
         } else {
-            createNewWindow()
+            createNewPanel()
         }
         isWindowVisible = true
+
+        // 清空搜索状态
+        ClipboardHistoryViewModel.shared.searchText = ""
+
+        setupKeyboardMonitoring()
     }
 
     /// 隐藏窗口
     func hideWindow() {
-        window?.orderOut(nil)
+        removeKeyboardMonitoring()
+        panel?.orderOut(nil)
         isWindowVisible = false
     }
 
@@ -45,47 +53,144 @@ class ClipboardWindowManager: ObservableObject {
         }
     }
 
-    /// 创建新窗口
-    private func createNewWindow() {
+    /// 创建新面板
+    private func createNewPanel() {
         let hostingView = NSHostingView(rootView: ClipboardHistoryContentView())
-        let newWindow = NSWindow(
+
+        // 使用 NSPanel 而不是 NSWindow，支持在全屏应用上显示
+        let newPanel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 450, height: 600),
-            styleMask: [.titled, .resizable, .fullSizeContentView],
+            styleMask: [.nonactivatingPanel, .titled, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
 
-        newWindow.title = "剪贴板历史"
-        newWindow.contentViewController = NSViewController()
-        newWindow.contentViewController?.view = hostingView
-        newWindow.center()
-        newWindow.isReleasedWhenClosed = false
-        newWindow.titlebarAppearsTransparent = true
-        newWindow.titleVisibility = .hidden
+        newPanel.title = "剪贴板历史"
+        newPanel.contentViewController = NSViewController()
+        newPanel.contentViewController?.view = hostingView
+        newPanel.center()
+        newPanel.isReleasedWhenClosed = false
 
-        // 隐藏标准窗口按钮
-        newWindow.standardWindowButton(.closeButton)?.isHidden = true
-        newWindow.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        newWindow.standardWindowButton(.zoomButton)?.isHidden = true
+        // NSPanel 关键配置
+        newPanel.isFloatingPanel = true           // 浮动面板
+        newPanel.becomesKeyOnlyIfNeeded = true    // 只在需要时成为 key，不激活应用
+        newPanel.level = .popUpMenu               // 使用更高的窗口级别
 
-        // 设置窗口级别
-        newWindow.level = .floating
+        // 隐藏标题栏
+        newPanel.titlebarAppearsTransparent = true
+        newPanel.titleVisibility = .hidden
+        newPanel.standardWindowButton(.closeButton)?.isHidden = true
+        newPanel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        newPanel.standardWindowButton(.zoomButton)?.isHidden = true
+
+        // 允许在所有桌面空间显示
+        newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
 
         // 失去焦点时自动隐藏（但不在显示 alert 时）
         NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
-            object: newWindow,
+            object: newPanel,
             queue: .main
         ) { [weak self] _ in
-            // 只有在没有显示 alert 时才隐藏窗口
             if !(self?.isShowingAlert ?? false) {
                 self?.hideWindow()
             }
         }
 
-        window = newWindow
-        newWindow.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        panel = newPanel
+        // 让面板成为 key window，这样失去焦点时会触发通知
+        newPanel.makeKeyAndOrderFront(nil)
+    }
+
+    // MARK: - 键盘事件监听
+
+    /// 设置键盘监听
+    private func setupKeyboardMonitoring() {
+        // 避免重复添加
+        guard keyEventHandler == nil else { return }
+
+        keyEventHandler = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            return self?.handleKeyEvent(event) ?? event
+        }
+    }
+
+    /// 移除键盘监听
+    private func removeKeyboardMonitoring() {
+        if let handler = keyEventHandler {
+            NSEvent.removeMonitor(handler)
+            keyEventHandler = nil
+        }
+    }
+
+    /// 处理键盘事件
+    private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+        guard isWindowVisible else { return event }
+
+        let keyCode = event.keyCode
+        let vm = ClipboardHistoryViewModel.shared
+
+        // ESC: 清空搜索或关闭窗口
+        if keyCode == 53 { // ESC
+            if !vm.searchText.isEmpty {
+                vm.searchText = ""
+                return nil // 消费事件
+            } else {
+                hideWindow()
+                return nil
+            }
+        }
+
+        // Backspace: 删除字符
+        if keyCode == 51 { // Backspace
+            if !vm.searchText.isEmpty {
+                vm.searchText.removeLast()
+            }
+            return nil
+        }
+
+        // 可打印字符: 添加到搜索
+        if isPrintableCharacter(event), let char = event.characters {
+            vm.searchText.append(char)
+            return nil // 消费事件，避免系统处理
+        }
+
+        return event // 其他事件不处理
+    }
+
+    /// 判断是否为可打印字符
+    private func isPrintableCharacter(_ event: NSEvent) -> Bool {
+        let keyCode = event.keyCode
+
+        // 排除功能键
+        let functionKeys: Set<UInt16> = [
+            53,   // ESC
+            36,   // Enter
+            48,   // Tab
+            51,   // Backspace
+            117,  // Delete
+            123, 124, 125, 126, // 方向键
+        ]
+
+        if functionKeys.contains(keyCode) {
+            return false
+        }
+
+        // 检查修饰键（排除 Shift）
+        let modifiers = event.modifierFlags
+        let hasCommand = modifiers.contains(.command)
+        let hasControl = modifiers.contains(.control)
+        let hasOption = modifiers.contains(.option)
+
+        if hasCommand || hasControl || hasOption {
+            return false
+        }
+
+        // 检查字符
+        if let characters = event.characters, !characters.isEmpty {
+            return true
+        }
+
+        return false
     }
 }
 
@@ -96,14 +201,23 @@ struct ClipboardHistoryContentView: View {
     @State private var showClearConfirm = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 标题栏
-            titleBar
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 0) {
+                // 标题栏
+                titleBar
 
-            // 历史视图
-            ClipboardHistoryView()
+                // 历史视图
+                ClipboardHistoryView()
+            }
+            .frame(minWidth: 400, minHeight: 500)
+
+            // 左上角搜索输入覆盖层（覆盖标题栏）
+            SearchInputOverlay(
+                searchText: $viewModel.searchText,
+                itemCount: viewModel.filteredItems.count
+            )
+            .padding(12)
         }
-        .frame(minWidth: 400, minHeight: 500)
     }
 
     private var titleBar: some View {

@@ -9,8 +9,6 @@ import SwiftUI
 
 struct ClipboardHistoryView: View {
     @ObservedObject var viewModel: ClipboardHistoryViewModel
-    @State private var searchText = ""
-    @FocusState private var isSearchFocused: Bool
 
     init(refreshTrigger: UUID? = nil) {
         // 默认使用 shared viewModel
@@ -19,84 +17,11 @@ struct ClipboardHistoryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 搜索栏
-            searchBar
-                .padding(12)
-                .background(Color(NSColor.controlBackgroundColor))
-
-            Divider()
-
-            // 内容区域
             contentView
         }
         .frame(minWidth: 400, minHeight: 500)
         .onAppear {
             loadItems()
-        }
-    }
-
-    private var searchBar: some View {
-        HStack(spacing: DesignSystem.Spacing.sm) {
-            // 搜索图标
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 14))
-                .foregroundStyle(isSearchFocused ? Color.accentColor : DesignSystem.Colors.textSecondary)
-                .animation(DesignSystem.Animation.quick, value: isSearchFocused)
-
-            // 搜索框
-            TextField("搜索剪贴板历史...", text: $searchText)
-                .focused($isSearchFocused)
-                .textFieldStyle(.plain)
-                .font(.system(size: 13))
-                .onSubmit {
-                    performSearch()
-                }
-
-            // 清除按钮
-            if !searchText.isEmpty {
-                Button(action: {
-                    withAnimation(DesignSystem.Animation.quick) {
-                        searchText = ""
-                    }
-                }) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.secondary.opacity(0.1))
-                            .frame(width: 18, height: 18)
-
-                        Image(systemName: "xmark")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(DesignSystem.Colors.textSecondary)
-                    }
-                }
-                .buttonStyle(.plain)
-                .transition(.scale.combined(with: .opacity))
-            }
-        }
-        .padding(.horizontal, DesignSystem.Spacing.md)
-        .padding(.vertical, DesignSystem.Spacing.sm)
-        .background(
-            ZStack {
-                // 背景圆角
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                    .fill(DesignSystem.Colors.searchField)
-
-                // 聚焦时的边框
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                    .stroke(
-                        Color.accentColor.opacity(isSearchFocused ? 0.5 : 0),
-                        lineWidth: 1.5
-                    )
-                    .animation(DesignSystem.Animation.quick, value: isSearchFocused)
-            }
-        )
-        .designShadow(isSearchFocused ? DesignSystem.Shadow.md : DesignSystem.Shadow.sm)
-        .animation(DesignSystem.Animation.quick, value: isSearchFocused)
-        .onChange(of: searchText) { _, newValue in
-            viewModel.searchText = newValue
-            if newValue.isEmpty {
-                viewModel.loadItems()
-            }
         }
     }
 
@@ -191,7 +116,7 @@ struct ClipboardHistoryView: View {
                     .foregroundStyle(Color.accentColor.opacity(0.6))
             }
 
-            if searchText.isEmpty {
+            if viewModel.searchText.isEmpty {
                 Text("剪贴板为空")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
@@ -206,7 +131,7 @@ struct ClipboardHistoryView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
 
-                Text("没有找到匹配 \"\(searchText)\" 的内容")
+                Text("没有找到匹配 \"\(viewModel.searchText)\" 的内容")
                     .font(.system(size: 13))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .multilineTextAlignment(.center)
@@ -223,7 +148,8 @@ struct ClipboardHistoryView: View {
                     ClipboardItemRowView(
                         viewModel: ClipboardItemViewModel(
                             item: item,
-                            onDelete: { loadItems() }
+                            onDelete: { loadItems() },
+                            searchKeyword: viewModel.searchText
                         )
                     )
                 }
@@ -234,10 +160,6 @@ struct ClipboardHistoryView: View {
 
     private func loadItems() {
         viewModel.loadItems()
-    }
-
-    private func performSearch() {
-        viewModel.search()
     }
 }
 
