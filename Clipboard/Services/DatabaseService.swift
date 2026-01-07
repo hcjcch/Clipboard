@@ -30,7 +30,8 @@ enum DatabaseError: Error, LocalizedError {
 }
 
 /// 数据库服务类
-actor DatabaseService {
+@MainActor
+final class DatabaseService {
     static let shared = DatabaseService()
 
     private var db: Connection?

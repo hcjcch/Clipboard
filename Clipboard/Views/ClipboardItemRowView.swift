@@ -7,11 +7,18 @@
 
 import SwiftUI
 
+/// 动画完成通知
+extension Notification.Name {
+    static let copyAnimationDidComplete = Notification.Name("copyAnimationDidComplete")
+}
+
 struct ClipboardItemRowView: View {
     @ObservedObject var viewModel: ClipboardItemViewModel
+    @ObservedObject var historyViewModel = ClipboardHistoryViewModel.shared
     @State private var isHovering = false
     @State private var isPressed = false
     @State private var isDeleting = false
+    @State private var isShowingSuccessCheck = false
     @State private var imageData: Data?
 
     // 键盘导航状态
@@ -67,14 +74,33 @@ struct ClipboardItemRowView: View {
         }
         .onTapGesture {
             viewModel.copyToClipboard()
+            Task {
+                await showSuccessAnimation()
+                // 动画完成后关闭窗口
+                ClipboardWindowManager.shared.hideWindow()
+            }
         }
         .contextMenu {
-            Button(action: { viewModel.copyToClipboard() }) {
+            Button(action: {
+                viewModel.copyToClipboard()
+                Task {
+                    await showSuccessAnimation()
+                    ClipboardWindowManager.shared.hideWindow()
+                }
+            }) {
                 Label("复制", systemImage: "doc.on.doc")
             }
             Divider()
             Button(role: .destructive, action: { performDelete() }) {
                 Label("删除", systemImage: "trash")
+            }
+        }
+        .onChange(of: historyViewModel.animatingItemId) { _, animatingId in
+            // 当键盘触发动画时
+            if animatingId == viewModel.item.id {
+                Task {
+                    await showSuccessAnimation()
+                }
             }
         }
     }
@@ -94,6 +120,19 @@ struct ClipboardItemRowView: View {
         }
     }
 
+    /// 显示成功动画
+    private func showSuccessAnimation() async {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            isShowingSuccessCheck = true
+        }
+        try? await Task.sleep(nanoseconds: 600_000_000) // 0.6秒
+        withAnimation(.easeOut(duration: 0.2)) {
+            isShowingSuccessCheck = false
+        }
+        // 动画完成，发送通知
+        NotificationCenter.default.post(name: .copyAnimationDidComplete, object: nil)
+    }
+
     private var iconView: some View {
         ZStack {
             // 渐变背景
@@ -105,6 +144,21 @@ struct ClipboardItemRowView: View {
             Image(systemName: viewModel.item.type.iconName)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(Color.accentColor)
+                .opacity(isShowingSuccessCheck ? 0 : 1)
+
+            // 成功动画覆盖层
+            if isShowingSuccessCheck {
+                ZStack {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 36, height: 36)
+
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
         }
         .shadow(
             color: Color.accentColor.opacity(0.15),
@@ -287,7 +341,13 @@ struct ClipboardItemRowView: View {
     private var actionButtons: some View {
         HStack(spacing: DesignSystem.Spacing.xs) {
             // 复制按钮
-            Button(action: { viewModel.copyToClipboard() }) {
+            Button(action: {
+                viewModel.copyToClipboard()
+                Task {
+                    await showSuccessAnimation()
+                    ClipboardWindowManager.shared.hideWindow()
+                }
+            }) {
                 ZStack {
                     Circle()
                         .fill(Color.accentColor.opacity(0.1))

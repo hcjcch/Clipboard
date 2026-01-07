@@ -37,6 +37,7 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
     }
 
     /// 从 NSPasteboard 创建 ClipboardItem
+    @MainActor
     static func from(pasteboard: NSPasteboard) async -> ClipboardItem? {
         // 优先检查文件（因为文件剪贴板通常也包含文本）
         if let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],

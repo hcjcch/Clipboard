@@ -21,6 +21,9 @@ class ClipboardHistoryViewModel: ObservableObject {
     @Published var selectedItemIndex: Int? = nil
     @Published var isKeyboardNavigating: Bool = false
 
+    // 动画触发状态
+    @Published var animatingItemId: String? = nil
+
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
@@ -186,8 +189,49 @@ class ClipboardHistoryViewModel: ObservableObject {
         let selectedItem = filteredItems[index]
         selectItem(selectedItem)
 
-        // 复制后隐藏窗口
-        ClipboardWindowManager.shared.hideWindow()
+        // 触发动画
+        animatingItemId = selectedItem.id
+
+        // 等待动画完成后隐藏窗口
+        Task {
+            // 等待动画完成通知（最多等待 2 秒）
+            await waitForAnimationComplete()
+            ClipboardWindowManager.shared.hideWindow()
+        }
+    }
+
+    /// 等待动画完成
+    private func waitForAnimationComplete() async {
+        await withCheckedContinuation { continuation in
+            var resumed = false
+            var observer: NSObjectProtocol?
+
+            observer = NotificationCenter.default.addObserver(
+                forName: .copyAnimationDidComplete,
+                object: nil,
+                queue: .main
+            ) { _ in
+                if !resumed {
+                    resumed = true
+                    continuation.resume()
+                    if let obs = observer {
+                        NotificationCenter.default.removeObserver(obs)
+                    }
+                }
+            }
+
+            // 添加超时保护（2 秒）
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if !resumed {
+                    resumed = true
+                    continuation.resume()
+                    if let obs = observer {
+                        NotificationCenter.default.removeObserver(obs)
+                    }
+                }
+            }
+        }
     }
 
     /// 重置选中状态

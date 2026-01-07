@@ -13,6 +13,7 @@ class ClipboardItemViewModel: ObservableObject {
     let item: ClipboardItem
     private let onDelete: () -> Void
     let searchKeyword: String
+    var onCopySuccess: (() -> Void)?
 
     init(item: ClipboardItem, onDelete: @escaping () -> Void, searchKeyword: String = "") {
         self.item = item
@@ -24,6 +25,9 @@ class ClipboardItemViewModel: ObservableObject {
     func copyToClipboard() {
         Task {
             await ClipboardMonitorService.shared.copyToClipboard(item)
+            await MainActor.run {
+                onCopySuccess?()
+            }
         }
     }
 
