@@ -4,3 +4,6 @@
 # Xcode user data
 *.xcuserdatad/
 **/xcuserdata/
+*.build/
+*.swiftpm/
+Package.resolved
