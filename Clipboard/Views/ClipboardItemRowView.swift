@@ -19,6 +19,7 @@ struct ClipboardItemRowView: View {
     @State private var isPressed = false
     @State private var isDeleting = false
     @State private var isShowingSuccessCheck = false
+    @State private var checkmarkScale: CGFloat = 0
     @State private var imageData: Data?
 
     // 键盘导航状态
@@ -122,13 +123,28 @@ struct ClipboardItemRowView: View {
 
     /// 显示成功动画
     private func showSuccessAnimation() async {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+        // 重置状态
+        checkmarkScale = 0
+
+        // 第一阶段：原图标缩小
+        withAnimation(.easeOut(duration: 0.15)) {
             isShowingSuccessCheck = true
         }
-        try? await Task.sleep(nanoseconds: 600_000_000) // 0.6秒
-        withAnimation(.easeOut(duration: 0.2)) {
+
+        // 第二阶段：打钩弹出（稍晚一点）
+        try? await Task.sleep(nanoseconds: 80_000_000) // 0.08秒
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            checkmarkScale = 1
+        }
+
+        // 等待很短时间后消失
+        try? await Task.sleep(nanoseconds: 200_000_000) // 0.2秒
+
+        // 第三阶段：淡出
+        withAnimation(.easeOut(duration: 0.15)) {
             isShowingSuccessCheck = false
         }
+
         // 动画完成，发送通知
         NotificationCenter.default.post(name: .copyAnimationDidComplete, object: nil)
     }
@@ -145,19 +161,15 @@ struct ClipboardItemRowView: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(Color.accentColor)
                 .opacity(isShowingSuccessCheck ? 0 : 1)
+                .scaleEffect(isShowingSuccessCheck ? 0.3 : 1)
 
-            // 成功动画覆盖层
+            // 成功动画覆盖层 - 只有打钩，没有背景
             if isShowingSuccessCheck {
-                ZStack {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 36, height: 36)
-
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                .transition(.scale.combined(with: .opacity))
+                Image(systemName: "checkmark")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(Color.green)
+                    .scaleEffect(checkmarkScale)
+                    .shadow(color: Color.green.opacity(0.3), radius: 2)
             }
         }
         .shadow(
