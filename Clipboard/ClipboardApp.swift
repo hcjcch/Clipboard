@@ -53,8 +53,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 2. 设置全局快捷键
         setupHotKey()
 
-        // 3. 隐藏 Dock 图标（可选，如果想作为菜单栏应用）
-        // NSApp.setActivationPolicy(.accessory)
+        // 3. 隐藏 Dock 图标，作为菜单栏应用运行
+        NSApp.setActivationPolicy(.accessory)
+
+        // 4. 初始化菜单栏图标
+        _ = StatusBarManager.shared
 
         print("应用启动完成")
         print("快捷键: ⌃⌘V 呼出/隐藏剪贴板历史")

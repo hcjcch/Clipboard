@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8BF191142F1162EE0095BC03 /* iShot_2026-01-10_00.22.32.png in Resources */ = {isa = PBXBuildFile; fileRef = 8BF191132F1162EE0095BC03 /* iShot_2026-01-10_00.22.32.png */; };
 		C86577ED2F03F85900D8930E /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = C86577EC2F03F85900D8930E /* SQLite */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		8BF191132F1162EE0095BC03 /* iShot_2026-01-10_00.22.32.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "iShot_2026-01-10_00.22.32.png"; sourceTree = "<group>"; };
 		C86577A72F03F26000D8930E /* Clipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Clipboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C86577B52F03F26100D8930E /* ClipboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClipboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C86577BF2F03F26100D8930E /* ClipboardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClipboardUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -80,6 +82,7 @@
 		C865779E2F03F26000D8930E = {
 			isa = PBXGroup;
 			children = (
+				8BF191132F1162EE0095BC03 /* iShot_2026-01-10_00.22.32.png */,
 				C86577A92F03F26000D8930E /* Clipboard */,
 				C86577B82F03F26100D8930E /* ClipboardTests */,
 				C86577C22F03F26100D8930E /* ClipboardUITests */,
@@ -221,6 +224,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8BF191142F1162EE0095BC03 /* iShot_2026-01-10_00.22.32.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

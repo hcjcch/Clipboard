@@ -33,10 +33,13 @@ let package = Package(
                 "Views/DesignSystem.swift",
                 "Views/HiddenInputField.swift",
                 "Views/SearchInputOverlay.swift",
+                "Views/SettingsView.swift",
+                "Views/SettingsWindowManager.swift",
                 "Services/DatabaseService.swift",
                 "Services/ClipboardMonitorService.swift",
                 "Services/HotKeyManager.swift",
                 "Services/ImageStorageService.swift",
+                "Services/StatusBarManager.swift",
                 "Utils/FuzzyMatcher.swift",
                 "Utils/TextHighlighter.swift"
             ],
