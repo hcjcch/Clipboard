@@ -25,8 +25,12 @@ let package = Package(
                 "Models/ClipboardItem.swift",
                 "Models/ClipboardItemType.swift",
                 "Models/MatchResult.swift",
+                "Models/HotKeyDefinition.swift",
+                "Models/UserSettings.swift",
+                "Models/SettingsOption.swift",
                 "ViewModels/ClipboardItemViewModel.swift",
                 "ViewModels/ClipboardHistoryViewModel.swift",
+                "ViewModels/SettingsViewModel.swift",
                 "Views/ClipboardItemRowView.swift",
                 "Views/ClipboardHistoryView.swift",
                 "Views/ClipboardMainWindow.swift",
@@ -35,13 +39,19 @@ let package = Package(
                 "Views/SearchInputOverlay.swift",
                 "Views/SettingsView.swift",
                 "Views/SettingsWindowManager.swift",
+                "Views/HotKeyRecorderView.swift",
+                "Views/SettingsSidebarView.swift",
+                "Views/HotKeySettingsPanelView.swift",
+                "Views/HotKeyDisplayView.swift",
                 "Services/DatabaseService.swift",
                 "Services/ClipboardMonitorService.swift",
                 "Services/HotKeyManager.swift",
                 "Services/ImageStorageService.swift",
                 "Services/StatusBarManager.swift",
+                "Services/UserSettingsService.swift",
                 "Utils/FuzzyMatcher.swift",
-                "Utils/TextHighlighter.swift"
+                "Utils/TextHighlighter.swift",
+                "Utils/SystemHotKeyValidator.swift"
             ],
             resources: [
                 .process("Assets.xcassets")

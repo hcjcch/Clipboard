@@ -245,21 +245,13 @@ struct ClipboardHistoryContentView: View {
             .help("清空历史")
 
             // 快捷键提示
-            HStack(spacing: DesignSystem.Spacing.xs) {
-                Image(systemName: "command")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-
-                Text("⌃V")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(DesignSystem.Colors.textTertiary)
-            }
-            .padding(.horizontal, DesignSystem.Spacing.sm)
-            .padding(.vertical, DesignSystem.Spacing.xs)
-            .background(
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
-                    .fill(Color.secondary.opacity(0.1))
-            )
+            HotKeyDisplayView()
+                .padding(.horizontal, DesignSystem.Spacing.sm)
+                .padding(.vertical, DesignSystem.Spacing.xs)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
+                        .fill(Color.secondary.opacity(0.1))
+                )
 
             // 关闭按钮
             Button(action: { ClipboardWindowManager.shared.hideWindow() }) {

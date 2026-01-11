@@ -138,3 +138,10 @@ Clipboard/
 
 ### 高亮显示
 使用 `TextHighlighter.highlightedText()` 为搜索结果创建高亮的 `AttributedString`，传入 `ClipboardItemRowView` 显示。
+
+## Active Technologies
+- Swift 6.0 + SwiftUI (UI), AppKit (NSStatusItem, NSPanel), Carbon (全局快捷键注册) (001-settings-hotkey-layout)
+- UserDefaults (用户设置持久化) (001-settings-hotkey-layout)
+
+## Recent Changes
+- 001-settings-hotkey-layout: Added Swift 6.0 + SwiftUI (UI), AppKit (NSStatusItem, NSPanel), Carbon (全局快捷键注册)

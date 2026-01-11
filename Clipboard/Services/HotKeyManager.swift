@@ -8,7 +8,7 @@
 import AppKit
 import Carbon
 
-/// 快捷键定义
+/// 快捷键定义（兼容旧版本）
 struct HotKey: Equatable {
     let keyCode: UInt32
     let modifiers: UInt32
@@ -20,6 +20,20 @@ struct HotKey: Equatable {
         modifiers: UInt32(cmdKey | controlKey),
         displayName: "⌃⌘V"
     )
+
+    /// 从 HotKeyDefinition 转换
+    init(from definition: HotKeyDefinition) {
+        self.keyCode = definition.keyCode
+        self.modifiers = definition.modifiers
+        self.displayName = definition.displayName
+    }
+
+    /// 标准初始化器
+    init(keyCode: UInt32, modifiers: UInt32, displayName: String) {
+        self.keyCode = keyCode
+        self.modifiers = modifiers
+        self.displayName = displayName
+    }
 }
 
 /// 全局快捷键管理器
@@ -29,15 +43,37 @@ class HotKeyManager {
 
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
+    private var currentHotKey: HotKey?
 
     // 快捷键按下时的回调
     var onHotKeyPressed: (() -> Void)?
 
-    private init() {}
+    private init() {
+        // 从 UserSettingsService 读取用户设置并注册
+        loadAndRegisterUserHotKey()
+    }
+
+    /// 从 UserSettingsService 加载并注册用户自定义快捷键
+    private func loadAndRegisterUserHotKey() {
+        let userSettings = UserSettingsService.shared.userSettings
+
+        if userSettings.isCustomHotKeyEnabled {
+            let hotKey = HotKey(from: userSettings.customHotKey)
+            register(hotKey: hotKey)
+        } else {
+            register(hotKey: .controlCommandV)
+        }
+    }
 
     /// 注册全局快捷键
     func register(hotKey: HotKey) {
-        // 如果已经注册，先取消
+        // 如果已经注册了相同的快捷键，不重复注册
+        if let current = currentHotKey, current == hotKey {
+            print("快捷键已注册: \(hotKey.displayName)")
+            return
+        }
+
+        // 先取消现有注册
         unregister()
 
         var hotKeyID = EventHotKeyID(signature: FOUR_CHAR_CODE("HCKY"), id: 1)
@@ -53,16 +89,29 @@ class HotKeyManager {
         )
 
         guard status == noErr, let hotKeyRef = hotKeyParams else {
-            print("注册快捷键失败: \(status)")
+            print("❌ 注册快捷键失败: \(status), displayName: \(hotKey.displayName)")
+            currentHotKey = nil
             return
         }
 
         self.hotKeyRef = hotKeyRef
+        self.currentHotKey = hotKey
 
         // 安装事件处理器
         installEventHandler()
 
-        print("已注册快捷键: \(hotKey.displayName)")
+        print("✅ 已注册快捷键: \(hotKey.displayName)")
+    }
+
+    /// 更新快捷键（热更新）
+    func updateHotKey(_ definition: HotKeyDefinition) {
+        let newHotKey = HotKey(from: definition)
+        register(hotKey: newHotKey)
+    }
+
+    /// 恢复默认快捷键
+    func resetToDefault() {
+        register(hotKey: .controlCommandV)
     }
 
     /// 取消快捷键注册
@@ -77,11 +126,17 @@ class HotKeyManager {
             self.eventHandlerRef = nil
         }
 
-        print("已取消快捷键注册")
+        currentHotKey = nil
+        print("✅ 已取消快捷键注册")
     }
 
     /// 安装事件处理器
     private func installEventHandler() {
+        // 如果已经安装，不重复安装
+        if eventHandlerRef != nil {
+            return
+        }
+
         var eventSpec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
 
         var eventHandlerRef: EventHandlerRef?
@@ -110,11 +165,12 @@ class HotKeyManager {
         )
 
         guard status == noErr, let eventHandlerRef = eventHandlerRef else {
-            print("安装事件处理器失败: \(status)")
+            print("❌ 安装事件处理器失败: \(status)")
             return
         }
 
         self.eventHandlerRef = eventHandlerRef
+        print("✅ 事件处理器已安装")
     }
 
     /// 处理快捷键事件
