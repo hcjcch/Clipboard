@@ -142,6 +142,8 @@ Clipboard/
 ## Active Technologies
 - Swift 6.0 + SwiftUI (UI), AppKit (NSStatusItem, NSPanel), Carbon (全局快捷键注册) (001-settings-hotkey-layout)
 - UserDefaults (用户设置持久化) (001-settings-hotkey-layout)
+- Swift 6.0 + SwiftUI (UI), AppKit (NSPanel, NSStatusItem), Foundation (Localization, UserDefaults), Combine (Observable) (001-i18n-lang-switch)
+- UserDefaults (语言设置), .lproj 文件 (本地化字符串资源), SQLite (剪贴板历史 - 不受语言切换影响) (001-i18n-lang-switch)
 
 ## Recent Changes
 - 001-settings-hotkey-layout: Added Swift 6.0 + SwiftUI (UI), AppKit (NSStatusItem, NSPanel), Carbon (全局快捷键注册)
