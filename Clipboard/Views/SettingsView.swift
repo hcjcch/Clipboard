@@ -30,6 +30,8 @@ struct SettingsView: View {
         switch selectedOption {
         case .hotkey:
             HotKeySettingsPanelView()
+        case .language:
+            LanguageSettingsPanelView()
         }
     }
 

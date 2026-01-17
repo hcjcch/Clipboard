@@ -64,7 +64,7 @@ struct ClipboardHistoryView: View {
             }
             .frame(width: 32, height: 32)
 
-            Text("加载中...")
+            LText("main.loading")
                 .font(.system(size: 13))
                 .foregroundStyle(DesignSystem.Colors.textSecondary)
         }
@@ -84,7 +84,7 @@ struct ClipboardHistoryView: View {
                     .foregroundStyle(Color.orange)
             }
 
-            Text("加载失败")
+            LText("main.load_failed")
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(DesignSystem.Colors.textPrimary)
 
@@ -93,7 +93,7 @@ struct ClipboardHistoryView: View {
                 .foregroundStyle(DesignSystem.Colors.textSecondary)
                 .multilineTextAlignment(.center)
 
-            Button("重试") {
+            Button("main.retry") {
                 loadItems()
             }
             .buttonStyle(.borderedProminent)
@@ -117,21 +117,21 @@ struct ClipboardHistoryView: View {
             }
 
             if viewModel.searchText.isEmpty {
-                Text("剪贴板为空")
+                LText("main.clipboard_empty")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
 
-                Text("复制一些内容后，它们会出现在这里")
+                LText("main.clipboard_empty_hint")
                     .font(.system(size: 13))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, DesignSystem.Spacing.xl)
             } else {
-                Text("未找到结果")
+                LText("main.no_results")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
 
-                Text("没有找到匹配 \"\(viewModel.searchText)\" 的内容")
+                Text(String(format: "main.no_results_hint".localizedString(), viewModel.searchText))
                     .font(.system(size: 13))
                     .foregroundStyle(DesignSystem.Colors.textTertiary)
                     .multilineTextAlignment(.center)

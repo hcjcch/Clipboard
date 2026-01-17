@@ -1,0 +1,50 @@
+/* Language names */
+"language.english" = "English";
+"language.simplified_chinese" = "Simplified Chinese";
+
+/* Settings - Language */
+"settings.language.title" = "Language";
+"settings.language.description" = "Choose the display language for the app";
+
+/* Settings - Title */
+"settings.title" = "Settings";
+
+/* Settings - General */
+"settings.general" = "General";
+
+/* Settings - Hotkey */
+"settings.hotkey" = "Hotkey";
+"settings.hotkey.invoke" = "Invoke Hotkey";
+"settings.hotkey.clear" = "Clear";
+"settings.hotkey.reset" = "Reset to Default";
+"settings.hotkey.click_to_record" = "Click to Record";
+"settings.hotkey.press_hotkey" = "Press Hotkey";
+"settings.hotkey.settings_title" = "Hotkey Settings";
+"settings.hotkey.description" = "Set a global hotkey to show clipboard history";
+"settings.hotkey.usage_title" = "Instructions";
+"settings.hotkey.usage_step1" = "Click the record button or hotkey input field to start recording";
+"settings.hotkey.usage_step2" = "Press a new key combination (must include at least one modifier: ⌃, ⌥, ⇧, ⌘)";
+"settings.hotkey.usage_step3" = "Press Escape or click cancel button to cancel recording";
+"settings.hotkey.usage_step4" = "Hotkey takes effect immediately, no need to restart the app";
+
+/* Status Bar */
+"statusbar.quit" = "Quit";
+"statusbar.settings" = "Settings";
+"statusbar.toggle_history" = "Show Clipboard History";
+
+/* Main Window - Loading */
+"main.loading" = "Loading...";
+"main.load_failed" = "Load Failed";
+"main.retry" = "Retry";
+
+/* Main Window - Empty State */
+"main.clipboard_empty" = "Clipboard is Empty";
+"main.clipboard_empty_hint" = "Copy some content and it will appear here";
+"main.no_results" = "No Results Found";
+"main.no_results_hint" = "No content matching \"%@\" was found";
+
+/* Search */
+"main.search.placeholder" = "Search...";
+
+/* Error */
+"error.unknown" = "Unknown error";

@@ -15,7 +15,22 @@ class SettingsWindowManager {
 
     private var panel: NSPanel?
 
-    private init() {}
+    private init() {
+        // 监听语言变化通知
+        NotificationCenter.default.addObserver(
+            forName: .init("LanguageDidChange"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshLocale()
+            }
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
 
     /// 切换设置窗口显示/隐藏
     func toggleWindow() {
@@ -37,8 +52,12 @@ class SettingsWindowManager {
             return
         }
 
+        // 创建带 locale 的设置视图
+        let rootView = SettingsView()
+            .environment(\.locale, Locale(identifier: LocalizationService.shared.currentLanguage.localeIdentifier))
+
         // 创建新窗口
-        let hostingView = NSHostingView(rootView: SettingsView())
+        let hostingView = NSHostingView(rootView: rootView)
 
         let newPanel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 650, height: 450),
@@ -46,7 +65,7 @@ class SettingsWindowManager {
             backing: .buffered,
             defer: false
         )
-        newPanel.title = "设置"
+        newPanel.title = "settings.title".localizedString()
 
         // 设置内容视图
         let viewController = NSViewController()
@@ -76,8 +95,9 @@ class SettingsWindowManager {
             object: newPanel,
             queue: .main
         ) { [weak self] _ in
-            // 窗口关闭时自动保存设置
-            self?.handleWindowClose()
+            Task { @MainActor in
+                self?.handleWindowClose()
+            }
         }
 
         newPanel.makeKeyAndOrderFront(nil)
@@ -85,6 +105,20 @@ class SettingsWindowManager {
         panel = newPanel
 
         print("✅ Settings window opened")
+    }
+
+    /// 刷新 locale
+    private func refreshLocale() {
+        guard let hostingView = panel?.contentViewController?.view as? NSHostingView<AnyView> else { return }
+
+        // 更新窗口标题
+        panel?.title = "settings.title".localizedString()
+
+        // 重新创建视图以应用新的 locale
+        let newRootView = SettingsView()
+            .environment(\.locale, Locale(identifier: LocalizationService.shared.currentLanguage.localeIdentifier))
+
+        hostingView.rootView = AnyView(newRootView)
     }
 
     /// 处理窗口关闭事件

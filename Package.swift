@@ -22,6 +22,7 @@ let package = Package(
             ],
             sources: [
                 "ClipboardApp.swift",
+                "Models/AppLanguage.swift",
                 "Models/ClipboardItem.swift",
                 "Models/ClipboardItemType.swift",
                 "Models/MatchResult.swift",
@@ -39,6 +40,7 @@ let package = Package(
                 "Views/SearchInputOverlay.swift",
                 "Views/SettingsView.swift",
                 "Views/SettingsWindowManager.swift",
+                "Views/LanguageSettingsPanelView.swift",
                 "Views/HotKeyRecorderView.swift",
                 "Views/SettingsSidebarView.swift",
                 "Views/HotKeySettingsPanelView.swift",
@@ -49,12 +51,16 @@ let package = Package(
                 "Services/ImageStorageService.swift",
                 "Services/StatusBarManager.swift",
                 "Services/UserSettingsService.swift",
+                "Services/LocalizationService.swift",
                 "Utils/FuzzyMatcher.swift",
                 "Utils/TextHighlighter.swift",
-                "Utils/SystemHotKeyValidator.swift"
+                "Utils/SystemHotKeyValidator.swift",
+                "Utils/LocalizationHelper.swift"
             ],
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
+                .copy("Resources/zh-Hans.lproj"),
+                .copy("Resources/en.lproj")
             ],
             linkerSettings: [
                 .linkedFramework("AppKit"),

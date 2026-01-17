@@ -1,0 +1,50 @@
+/* Language names */
+"language.english" = "English";
+"language.simplified_chinese" = "简体中文";
+
+/* Settings - Language */
+"settings.language.title" = "语言";
+"settings.language.description" = "选择应用界面的显示语言";
+
+/* Settings - Title */
+"settings.title" = "设置";
+
+/* Settings - General */
+"settings.general" = "通用";
+
+/* Settings - Hotkey */
+"settings.hotkey" = "快捷键";
+"settings.hotkey.invoke" = "唤起快捷键";
+"settings.hotkey.clear" = "清除";
+"settings.hotkey.reset" = "恢复默认";
+"settings.hotkey.click_to_record" = "点击录制";
+"settings.hotkey.press_hotkey" = "按下快捷键";
+"settings.hotkey.settings_title" = "快捷键设置";
+"settings.hotkey.description" = "设置用于呼出剪贴板历史的全局快捷键";
+"settings.hotkey.usage_title" = "使用说明";
+"settings.hotkey.usage_step1" = "点击录制按钮或快捷键输入框开始录制";
+"settings.hotkey.usage_step2" = "按下新的组合键（必须包含至少一个修饰键：⌃、⌥、⇧、⌘）";
+"settings.hotkey.usage_step3" = "按 Escape 键或点击取消按钮取消录制";
+"settings.hotkey.usage_step4" = "快捷键设置后立即生效，无需重启应用";
+
+/* Status Bar */
+"statusbar.quit" = "退出";
+"statusbar.settings" = "设置";
+"statusbar.toggle_history" = "显示剪贴板历史";
+
+/* Main Window - Loading */
+"main.loading" = "加载中...";
+"main.load_failed" = "加载失败";
+"main.retry" = "重试";
+
+/* Main Window - Empty State */
+"main.clipboard_empty" = "剪贴板为空";
+"main.clipboard_empty_hint" = "复制一些内容后，它们会出现在这里";
+"main.no_results" = "未找到结果";
+"main.no_results_hint" = "没有找到匹配 \"%@\" 的内容";
+
+/* Search */
+"main.search.placeholder" = "搜索...";
+
+/* Error */
+"error.unknown" = "未知错误";

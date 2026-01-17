@@ -14,9 +14,25 @@ class StatusBarManager {
     static let shared = StatusBarManager()
 
     private var statusItem: NSStatusItem?
+    private let localizationService = LocalizationService.shared
 
     private init() {
         setupStatusBar()
+
+        // 监听语言变化通知
+        NotificationCenter.default.addObserver(
+            forName: .init("LanguageDidChange"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshMenu()
+            }
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     /// 设置菜单栏图标
@@ -41,23 +57,40 @@ class StatusBarManager {
     private func setupMenu() {
         let menu = NSMenu()
 
-        let toggleItem = NSMenuItem(title: "显示剪贴板历史", action: #selector(toggleWindow), keyEquivalent: "")
+        let toggleItem = NSMenuItem(
+            title: "statusbar.toggle_history".localizedString(),
+            action: #selector(toggleWindow),
+            keyEquivalent: ""
+        )
         toggleItem.target = self
         menu.addItem(toggleItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let settingsItem = NSMenuItem(title: "设置...", action: #selector(openSettings), keyEquivalent: ",")
+        let settingsItem = NSMenuItem(
+            title: "statusbar.settings".localizedString(),
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        let quitItem = NSMenuItem(title: "退出", action: #selector(quit), keyEquivalent: "q")
+        let quitItem = NSMenuItem(
+            title: "statusbar.quit".localizedString(),
+            action: #selector(quit),
+            keyEquivalent: "q"
+        )
         quitItem.target = self
         menu.addItem(quitItem)
 
         statusItem?.menu = menu
+    }
+
+    /// 刷新菜单（语言切换时调用）
+    func refreshMenu() {
+        setupMenu()
     }
 
     /// 切换窗口显示/隐藏

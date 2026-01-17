@@ -1,3 +1,10 @@
+//
+//  HotKeySettingsPanelView.swift
+//  Clipboard
+//
+//  Created by Claude on 2025/01/10.
+//
+
 import SwiftUI
 
 /// 快捷键设置面板视图
@@ -11,7 +18,7 @@ struct HotKeySettingsPanelView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             // 标题
-            Text("快捷键设置")
+            LText("settings.hotkey.settings_title")
                 .font(.title2)
                 .fontWeight(.semibold)
 
@@ -19,10 +26,10 @@ struct HotKeySettingsPanelView: View {
 
             // 当前快捷键设置
             VStack(alignment: .leading, spacing: 12) {
-                Text("呼出剪贴板历史")
+                LText("settings.hotkey.invoke")
                     .font(.headline)
 
-                Text("设置用于呼出剪贴板历史的全局快捷键")
+                LText("settings.hotkey.description")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
@@ -54,7 +61,7 @@ struct HotKeySettingsPanelView: View {
                         SettingsViewModel.shared.resetToDefault()
                         refreshFromViewModel()
                     }) {
-                        Text("恢复默认")
+                        LText("settings.hotkey.reset")
                             .font(.subheadline)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -70,7 +77,7 @@ struct HotKeySettingsPanelView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                        Text(error.errorDescription ?? "未知错误")
+                        Text(error.errorDescription ?? LString("error.unknown"))
                             .font(.subheadline)
                             .foregroundColor(.orange)
                     }
@@ -82,7 +89,7 @@ struct HotKeySettingsPanelView: View {
 
             // 使用说明
             VStack(alignment: .leading, spacing: 8) {
-                Text("使用说明")
+                LText("settings.hotkey.usage_title")
                     .font(.headline)
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -90,7 +97,7 @@ struct HotKeySettingsPanelView: View {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.accentColor)
                             .font(.caption)
-                        Text("点击录制按钮或快捷键输入框开始录制")
+                        LText("settings.hotkey.usage_step1")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -99,7 +106,7 @@ struct HotKeySettingsPanelView: View {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.accentColor)
                             .font(.caption)
-                        Text("按下新的组合键（必须包含至少一个修饰键：⌃、⌥、⇧、⌘）")
+                        LText("settings.hotkey.usage_step2")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -108,7 +115,7 @@ struct HotKeySettingsPanelView: View {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.accentColor)
                             .font(.caption)
-                        Text("按 Escape 键或点击取消按钮取消录制")
+                        LText("settings.hotkey.usage_step3")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -117,9 +124,9 @@ struct HotKeySettingsPanelView: View {
                         Image(systemName: "info.circle.fill")
                             .foregroundColor(.accentColor)
                             .font(.caption)
-                        Text("快捷键设置后立即生效，无需重启应用")
+                        LText("settings.hotkey.usage_step4")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
