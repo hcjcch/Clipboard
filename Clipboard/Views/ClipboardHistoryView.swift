@@ -16,13 +16,11 @@ struct ClipboardHistoryView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            contentView
-        }
-        .frame(minWidth: 400, minHeight: 500)
-        .onAppear {
-            loadItems()
-        }
+        contentView
+            .frame(minWidth: 400, minHeight: 500)
+            .onAppear {
+                loadItems()
+            }
     }
 
     @ViewBuilder
@@ -168,6 +166,9 @@ struct ClipboardHistoryView: View {
                     withAnimation(DesignSystem.Animation.quick) {
                         proxy.scrollTo(selectedItem.id, anchor: .center)
                     }
+
+                    // 键盘导航时显示预览
+                    viewModel.onItemFocused(selectedItem)
                 }
             }
         }

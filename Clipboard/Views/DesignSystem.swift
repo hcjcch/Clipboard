@@ -87,6 +87,9 @@ enum DesignSystem {
         static let textPrimary = Color.primary
         static let textSecondary = Color.secondary
         static let textTertiary = Color(nsColor: .tertiaryLabelColor)
+
+        // 错误颜色
+        static let error = Color.red
     }
 
     // MARK: - 动画
@@ -97,6 +100,17 @@ enum DesignSystem {
             response: 0.3,
             dampingFraction: 0.8
         )
+    }
+
+    // MARK: - 预览面板
+    enum PreviewPanel {
+        static let background = Color(nsColor: .windowBackgroundColor)
+        static let cornerRadius: CGFloat = 12
+        static let borderColor = Color(nsColor: .separatorColor).opacity(0.3)
+        static let shadowColor = Color.black.opacity(0.2)
+        static let shadowRadius: CGFloat = 16
+        static let shadowX: CGFloat = 0
+        static let shadowY: CGFloat = 4
     }
 }
 

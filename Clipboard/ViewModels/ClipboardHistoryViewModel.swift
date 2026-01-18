@@ -5,6 +5,7 @@
 //  Created by huangchen.102 on 2025/12/30.
 //
 
+import AppKit
 import Foundation
 
 @MainActor
@@ -24,11 +25,17 @@ class ClipboardHistoryViewModel: ObservableObject {
     // 动画触发状态
     @Published var animatingItemId: String? = nil
 
+    // 预览面板状态
+    @Published var previewPanelState: PreviewPanelState = .hidden
+    let previewPanelViewModel = PreviewPanelViewModel()
+    private let hoverState = HoverState()
+
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
         setupNotifications()
         setupSearchDebounce()
+        setupHoverState()
         loadItems()
     }
 
@@ -238,6 +245,65 @@ class ClipboardHistoryViewModel: ObservableObject {
     func resetSelection() {
         selectedItemIndex = nil
         isKeyboardNavigating = false
+    }
+
+    // MARK: - Preview Panel
+
+    /// 当前悬停的剪贴板项
+    var hoveredItem: ClipboardItem? {
+        hoverState.currentItem
+    }
+
+    /// 是否应该显示预览面板
+    var shouldShowPreview: Bool {
+        if case .showing = previewPanelState {
+            return true
+        }
+        return false
+    }
+
+    /// 处理列表项悬停事件
+    /// - Parameter item: 悬停的剪贴板项
+    func onItemHovered(_ item: ClipboardItem) {
+        // 键盘导航时禁用鼠标悬停预览
+        guard !isKeyboardNavigating else { return }
+
+        hoverState.startHover(for: item, delay: 0.2)
+    }
+
+    /// 处理列表项离开事件
+    func onItemExited() {
+        hoverState.cancelHover()
+        previewPanelViewModel.hidePreview()
+        PreviewPanelWindowManager.shared.hidePreview()
+        previewPanelState = .hidden
+    }
+
+    /// 处理列表项焦点事件（键盘导航）
+    /// - Parameter item: 获得焦点的剪贴板项
+    func onItemFocused(_ item: ClipboardItem) {
+        // 键盘导航时立即显示预览（无延迟）
+        previewPanelViewModel.showPreview(for: item)
+        previewPanelState = .showing(item)
+
+        // 显示浮动预览面板
+        if let mainWindow = ClipboardWindowManager.shared.mainWindow {
+            PreviewPanelWindowManager.shared.showPreview(for: item, mainWindow: mainWindow)
+        }
+    }
+
+    /// 设置悬停状态
+    private func setupHoverState() {
+        hoverState.onHoverReady = { [weak self] item in
+            guard let self = self, let item = item else { return }
+            self.previewPanelViewModel.showPreview(for: item)
+            self.previewPanelState = .showing(item)
+
+            // 显示浮动预览面板
+            if let mainWindow = ClipboardWindowManager.shared.mainWindow {
+                PreviewPanelWindowManager.shared.showPreview(for: item, mainWindow: mainWindow)
+            }
+        }
     }
 }
 

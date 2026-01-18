@@ -72,6 +72,13 @@ struct ClipboardItemRowView: View {
             withAnimation(DesignSystem.Animation.quick) {
                 isHovering = hovering
             }
+
+            // 通知 ViewModel 悬停状态变化
+            if hovering {
+                historyViewModel.onItemHovered(viewModel.item)
+            } else {
+                historyViewModel.onItemExited()
+            }
         }
         .onTapGesture {
             viewModel.copyToClipboard()

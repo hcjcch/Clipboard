@@ -19,6 +19,11 @@ class ClipboardWindowManager: ObservableObject {
     private var panel: NSPanel?
     private var keyEventHandler: Any?
 
+    /// 获取主窗口（供预览面板使用）
+    var mainWindow: NSPanel? {
+        return panel
+    }
+
     private init() {}
 
     /// 显示窗口
