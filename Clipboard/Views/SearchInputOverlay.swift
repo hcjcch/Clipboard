@@ -15,22 +15,30 @@ struct SearchInputOverlay: View {
         Group {
             if !searchText.isEmpty {
                 HStack(spacing: DesignSystem.Spacing.sm) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.accentColor)
+
                     Text(searchText)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.black)
+                        .foregroundStyle(DesignSystem.Colors.textPrimary)
 
                     Button(action: { searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 12))
-                            .foregroundStyle(.black.opacity(0.6))
+                            .foregroundStyle(DesignSystem.Colors.textTertiary)
                     }
                     .buttonStyle(.plain)
                 }
                 .padding(.horizontal, DesignSystem.Spacing.md)
                 .padding(.vertical, DesignSystem.Spacing.xs)
-                .background(Color.yellow)
+                .background(.regularMaterial)
                 .cornerRadius(DesignSystem.CornerRadius.sm)
-                .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
+                        .stroke(Color.accentColor.opacity(0.18), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
             }
         }
     }

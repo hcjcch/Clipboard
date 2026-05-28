@@ -203,30 +203,23 @@ struct PreviewPanelContentView: View {
             HStack(spacing: 8) {
                 // 类型图标
                 previewTypeIcon
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 28, height: 28)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 26, height: 26)
                     .background(
-                        LinearGradient(
-                            colors: [
-                                Color.accentColor.opacity(0.85),
-                                Color.accentColor.opacity(0.65)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .fill(Color.accentColor.opacity(0.09))
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
 
                 // 类型标题
                 Text(previewTitle)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(DesignSystem.Colors.textPrimary)
 
                 Spacer()
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
+            .padding(.vertical, 10)
             .background(
                 Rectangle()
                     .fill(.ultraThinMaterial)
@@ -250,7 +243,7 @@ struct PreviewPanelContentView: View {
         .frame(width: 400, height: 400)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: Color.black.opacity(0.15), radius: 24, x: 0, y: 12)
+        .shadow(color: Color.black.opacity(0.12), radius: 18, x: 0, y: 8)
     }
 
     /// 预览类型图标

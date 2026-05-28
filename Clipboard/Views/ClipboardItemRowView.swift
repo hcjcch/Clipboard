@@ -27,10 +27,10 @@ struct ClipboardItemRowView: View {
     var isKeyboardNavigating: Bool = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
+        HStack(alignment: .center, spacing: 12) {
             // 图标/缩略图
             iconView
-                .frame(width: 44, height: 44)
+                .frame(width: 38, height: 38)
 
             // 内容预览
             contentView
@@ -39,22 +39,22 @@ struct ClipboardItemRowView: View {
             // 操作按钮
             actionButtons
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(rowBackgroundColor)
 
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(rowStrokeColor, lineWidth: isSelected && isKeyboardNavigating ? 1.25 : 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(rowStrokeColor, lineWidth: isSelected && isKeyboardNavigating ? 1 : 0.75)
             }
         )
         .shadow(
             color: rowShadowColor,
-            radius: isSelected && isKeyboardNavigating ? 8 : 0,
+            radius: isSelected && isKeyboardNavigating ? 5 : 0,
             x: 0,
-            y: 3
+            y: 2
         )
         .offset(x: isDeleting ? 400 : 0)
         .opacity(isDeleting ? 0 : 1)
@@ -166,14 +166,14 @@ struct ClipboardItemRowView: View {
             Image(systemName: viewModel.item.isPinned ? "pin.fill" : "pin")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(viewModel.item.isPinned ? Color.accentColor : DesignSystem.Colors.textTertiary)
-                .frame(width: 28, height: 28)
+                .frame(width: 26, height: 26)
                 .background(
                     Circle()
-                        .fill(viewModel.item.isPinned ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(isHovering ? 0.08 : 0.04))
+                        .fill(viewModel.item.isPinned ? Color.accentColor.opacity(0.10) : DesignSystem.Colors.controlFill)
                 )
                 .overlay(
                     Circle()
-                        .stroke(viewModel.item.isPinned ? Color.accentColor.opacity(0.22) : Color.secondary.opacity(0.08), lineWidth: 1)
+                        .stroke(viewModel.item.isPinned ? Color.accentColor.opacity(0.18) : DesignSystem.Colors.controlStroke, lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
@@ -214,23 +214,18 @@ struct ClipboardItemRowView: View {
     private var iconView: some View {
         ZStack {
             // 渐变背景
-            RoundedRectangle(cornerRadius: 11, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.accentColor.opacity(0.16),
-                            Color.accentColor.opacity(0.07)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color.accentColor.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .stroke(Color.accentColor.opacity(0.10), lineWidth: 1)
                 )
-                .frame(width: 44, height: 44)
+                .frame(width: 38, height: 38)
 
             // 图标
             Image(systemName: viewModel.item.type.iconName)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundStyle(Color.accentColor)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Color.accentColor.opacity(0.92))
                 .opacity(isShowingSuccessCheck ? 0 : 1)
                 .scaleEffect(isShowingSuccessCheck ? 0.3 : 1)
 
@@ -243,12 +238,6 @@ struct ClipboardItemRowView: View {
                     .shadow(color: Color.green.opacity(0.3), radius: 2)
             }
         }
-        .shadow(
-            color: Color.accentColor.opacity(0.08),
-            radius: 4,
-            x: 0,
-            y: 2
-        )
     }
 
     private var contentView: some View {
@@ -450,11 +439,15 @@ struct ClipboardItemRowView: View {
     private func actionIcon(_ systemName: String, color: Color) -> some View {
         Image(systemName: systemName)
             .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(color)
-            .frame(width: 28, height: 28)
+            .foregroundStyle(color.opacity(0.92))
+            .frame(width: 26, height: 26)
             .background(
                 Circle()
-                    .fill(color.opacity(0.10))
+                    .fill(DesignSystem.Colors.controlFill)
+            )
+            .overlay(
+                Circle()
+                    .stroke(DesignSystem.Colors.controlStroke, lineWidth: 1)
             )
     }
 }

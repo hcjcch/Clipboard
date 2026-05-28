@@ -209,27 +209,27 @@ struct ClipboardHistoryContentView: View {
     }
 
     private var titleBar: some View {
-        HStack(spacing: DesignSystem.Spacing.md) {
+        HStack(spacing: 12) {
             // App 图标
             ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.accentColor.opacity(0.92),
-                                Color.accentColor.opacity(0.68)
+                                Color.accentColor.opacity(0.88),
+                                Color.accentColor.opacity(0.66)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 42, height: 42)
+                    .frame(width: 38, height: 38)
 
                 Image(systemName: "clipboard.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.white)
             }
-            .shadow(color: Color.accentColor.opacity(0.22), radius: 8, x: 0, y: 3)
+            .shadow(color: Color.accentColor.opacity(0.14), radius: 5, x: 0, y: 2)
 
             // 标题
             Text("剪贴板历史")
@@ -247,11 +247,15 @@ struct ClipboardHistoryContentView: View {
 
             // 快捷键提示
             HotKeyDisplayView()
-                .padding(.horizontal, 13)
-                .frame(height: 34)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
                 .background(
                     Capsule()
-                        .fill(Color.secondary.opacity(0.10))
+                        .fill(DesignSystem.Colors.controlFill)
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(DesignSystem.Colors.controlStroke, lineWidth: 1)
                 )
 
             // 关闭按钮
@@ -262,7 +266,7 @@ struct ClipboardHistoryContentView: View {
             .help("关闭")
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.vertical, 15)
         .background(
             ZStack {
                 // 毛玻璃背景
@@ -292,12 +296,16 @@ struct ClipboardHistoryContentView: View {
 
     private func toolbarIcon(_ systemName: String, color: Color) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(color)
-            .frame(width: 34, height: 34)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(color.opacity(0.9))
+            .frame(width: 30, height: 30)
             .background(
                 Circle()
-                    .fill(color.opacity(0.11))
+                    .fill(DesignSystem.Colors.controlFill)
+            )
+            .overlay(
+                Circle()
+                    .stroke(DesignSystem.Colors.controlStroke, lineWidth: 1)
             )
     }
 }
