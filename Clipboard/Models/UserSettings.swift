@@ -8,9 +8,13 @@ struct UserSettings: Codable, Sendable {
     /// 是否使用自定义快捷键（false 表示使用默认）
     var isCustomHotKeyEnabled: Bool
 
+    /// 最大历史记录数量，0 表示不限制
+    var maxHistoryItems: Int
+
     /// 默认设置
     static let `default` = UserSettings(
         customHotKey: .controlCommandV,
-        isCustomHotKeyEnabled: false
+        isCustomHotKeyEnabled: false,
+        maxHistoryItems: 1000
     )
 }

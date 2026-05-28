@@ -76,7 +76,7 @@ class ClipboardMonitorService: ObservableObject {
 
         // 保存到数据库
         do {
-            try DatabaseService.shared.insert(newItem)
+            try await DatabaseService.shared.insert(newItem)
 
             // 发送通知
             NotificationCenter.default.post(

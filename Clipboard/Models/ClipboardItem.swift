@@ -16,24 +16,27 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
     let createdAt: Date
     var thumbnailData: Data?
     var imagePath: String?  // 图片文件 ID（不含扩展名）
+    var isPinned: Bool
 
-    init(content: String, type: ClipboardItemType, thumbnailData: Data? = nil, imagePath: String? = nil) {
+    init(content: String, type: ClipboardItemType, thumbnailData: Data? = nil, imagePath: String? = nil, isPinned: Bool = false) {
         self.id = UUID().uuidString
         self.content = content
         self.type = type
         self.createdAt = Date()
         self.thumbnailData = thumbnailData
         self.imagePath = imagePath
+        self.isPinned = isPinned
     }
 
     /// 完整初始化器（用于从数据库恢复）
-    init(id: String, content: String, type: ClipboardItemType, createdAt: Date, thumbnailData: Data? = nil, imagePath: String? = nil) {
+    init(id: String, content: String, type: ClipboardItemType, createdAt: Date, thumbnailData: Data? = nil, imagePath: String? = nil, isPinned: Bool = false) {
         self.id = id
         self.content = content
         self.type = type
         self.createdAt = createdAt
         self.thumbnailData = thumbnailData
         self.imagePath = imagePath
+        self.isPinned = isPinned
     }
 
     /// 从 NSPasteboard 创建 ClipboardItem
@@ -65,11 +68,12 @@ struct ClipboardItem: Identifiable, Codable, Equatable {
         if let imageData = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff) {
             // 保存图片到文件
             let imageId = await ImageStorageService.shared.saveImage(imageData)
+            let thumbnailData = await ImageStorageService.shared.generateThumbnail(from: imageData, maxSize: 240)
 
             return ClipboardItem(
                 content: "<image>",
                 type: .image,
-                thumbnailData: imageData,  // 同时保存数据用于快速显示
+                thumbnailData: thumbnailData ?? imageData,
                 imagePath: imageId         // 文件路径用于持久化
             )
         }

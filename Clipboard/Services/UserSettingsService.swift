@@ -14,6 +14,7 @@ final class UserSettingsService {
         static let customHotKeyModifiers = "customHotKeyModifiers"
         static let customHotKeyDisplayName = "customHotKeyDisplayName"
         static let isCustomHotKeyEnabled = "isCustomHotKeyEnabled"
+        static let maxHistoryItems = "maxHistoryItems"
     }
 
     /// 当前用户设置
@@ -38,13 +39,17 @@ final class UserSettingsService {
             let keyCode = userDefaults.object(forKey: Keys.customHotKeyKeyCode) as? UInt32 ?? HotKeyDefinition.controlCommandV.keyCode
             let modifiers = userDefaults.object(forKey: Keys.customHotKeyModifiers) as? UInt32 ?? HotKeyDefinition.controlCommandV.modifiers
             let displayName = userDefaults.string(forKey: Keys.customHotKeyDisplayName) ?? HotKeyDefinition.controlCommandV.displayName
+            let maxHistoryItems = userDefaults.object(forKey: Keys.maxHistoryItems) as? Int ?? UserSettings.default.maxHistoryItems
 
             userSettings = UserSettings(
                 customHotKey: HotKeyDefinition(keyCode: keyCode, modifiers: modifiers, displayName: displayName),
-                isCustomHotKeyEnabled: true
+                isCustomHotKeyEnabled: true,
+                maxHistoryItems: maxHistoryItems
             )
         } else {
-            userSettings = .default
+            var settings = UserSettings.default
+            settings.maxHistoryItems = userDefaults.object(forKey: Keys.maxHistoryItems) as? Int ?? UserSettings.default.maxHistoryItems
+            userSettings = settings
         }
 
         print("✅ UserSettings loaded: \(userSettings.customHotKey.displayName), enabled: \(userSettings.isCustomHotKeyEnabled)")
@@ -56,6 +61,7 @@ final class UserSettingsService {
         userDefaults.set(userSettings.customHotKey.modifiers, forKey: Keys.customHotKeyModifiers)
         userDefaults.set(userSettings.customHotKey.displayName, forKey: Keys.customHotKeyDisplayName)
         userDefaults.set(userSettings.isCustomHotKeyEnabled, forKey: Keys.isCustomHotKeyEnabled)
+        userDefaults.set(userSettings.maxHistoryItems, forKey: Keys.maxHistoryItems)
 
         print("✅ UserSettings saved: \(userSettings.customHotKey.displayName), enabled: \(userSettings.isCustomHotKeyEnabled)")
     }
@@ -69,9 +75,20 @@ final class UserSettingsService {
         NotificationCenter.default.post(name: .init("HotKeyDidChange"), object: nil)
     }
 
+    /// 更新最大历史记录数量
+    func updateMaxHistoryItems(_ maxItems: Int) {
+        userSettings.maxHistoryItems = maxItems
+        NotificationCenter.default.post(name: .init("HistorySettingsDidChange"), object: nil)
+    }
+
     /// 恢复默认快捷键
     func resetToDefault() {
-        userSettings = .default
+        let currentMaxHistoryItems = userSettings.maxHistoryItems
+        userSettings = UserSettings(
+            customHotKey: .controlCommandV,
+            isCustomHotKeyEnabled: false,
+            maxHistoryItems: currentMaxHistoryItems
+        )
 
         // 发送通知，让 UI 更新快捷键显示
         NotificationCenter.default.post(name: .init("HotKeyDidChange"), object: nil)

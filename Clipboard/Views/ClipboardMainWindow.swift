@@ -97,8 +97,10 @@ class ClipboardWindowManager: ObservableObject {
             object: newPanel,
             queue: .main
         ) { [weak self] _ in
-            if !(self?.isShowingAlert ?? false) {
-                self?.hideWindow()
+            Task { @MainActor in
+                if !(self?.isShowingAlert ?? false) {
+                    self?.hideWindow()
+                }
             }
         }
 
@@ -186,7 +188,8 @@ struct ClipboardHistoryContentView: View {
                 // 历史视图
                 ClipboardHistoryView()
             }
-            .frame(minWidth: 400, minHeight: 500)
+            .frame(minWidth: 420, minHeight: 520)
+            .background(DesignSystem.Colors.panelBackground)
 
             // 左上角搜索输入覆盖层（覆盖标题栏）
             SearchInputOverlay(
@@ -209,72 +212,57 @@ struct ClipboardHistoryContentView: View {
         HStack(spacing: DesignSystem.Spacing.md) {
             // App 图标
             ZStack {
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.accentColor.opacity(0.8),
-                                Color.accentColor.opacity(0.5)
+                                Color.accentColor.opacity(0.92),
+                                Color.accentColor.opacity(0.68)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 28, height: 28)
+                    .frame(width: 42, height: 42)
 
                 Image(systemName: "clipboard.fill")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
             }
+            .shadow(color: Color.accentColor.opacity(0.22), radius: 8, x: 0, y: 3)
 
             // 标题
             Text("剪贴板历史")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 19, weight: .semibold))
                 .foregroundStyle(DesignSystem.Colors.textPrimary)
 
             Spacer()
 
             // 清除按钮
             Button(action: { showClearConfirm = true }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.orange.opacity(0.1))
-                        .frame(width: 24, height: 24)
-
-                    Image(systemName: "trash")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.orange.opacity(0.8))
-                }
+                toolbarIcon("trash", color: .orange)
             }
             .buttonStyle(.plain)
             .help("清空历史")
 
             // 快捷键提示
             HotKeyDisplayView()
-                .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.vertical, DesignSystem.Spacing.xs)
+                .padding(.horizontal, 13)
+                .frame(height: 34)
                 .background(
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
-                        .fill(Color.secondary.opacity(0.1))
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.10))
                 )
 
             // 关闭按钮
             Button(action: { ClipboardWindowManager.shared.hideWindow() }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.red.opacity(0.1))
-                        .frame(width: 24, height: 24)
-
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.red.opacity(0.8))
-                }
+                toolbarIcon("xmark", color: .red)
             }
             .buttonStyle(.plain)
             .help("关闭")
         }
-        .padding(.horizontal, DesignSystem.Spacing.lg)
-        .padding(.vertical, DesignSystem.Spacing.md)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
         .background(
             ZStack {
                 // 毛玻璃背景
@@ -282,7 +270,7 @@ struct ClipboardHistoryContentView: View {
 
                 // 底部边框
                 Rectangle()
-                    .fill(Color.black.opacity(0.05))
+                    .fill(DesignSystem.Colors.separator)
                     .frame(height: 1)
                     .frame(maxHeight: .infinity, alignment: .bottom)
             }
@@ -300,6 +288,17 @@ struct ClipboardHistoryContentView: View {
         .onChange(of: showClearConfirm) { _, newValue in
             ClipboardWindowManager.shared.isShowingAlert = newValue
         }
+    }
+
+    private func toolbarIcon(_ systemName: String, color: Color) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(color)
+            .frame(width: 34, height: 34)
+            .background(
+                Circle()
+                    .fill(color.opacity(0.11))
+            )
     }
 }
 

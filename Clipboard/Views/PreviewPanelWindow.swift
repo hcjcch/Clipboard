@@ -157,7 +157,9 @@ class PreviewPanelWindowManager: ObservableObject {
             object: mainWindow,
             queue: .main
         ) { [weak self] _ in
-            self?.updatePanelPosition()
+            Task { @MainActor in
+                self?.updatePanelPosition()
+            }
         }
         windowObservers.append(moveObserver)
 
@@ -167,7 +169,9 @@ class PreviewPanelWindowManager: ObservableObject {
             object: mainWindow,
             queue: .main
         ) { [weak self] _ in
-            self?.updatePanelPosition()
+            Task { @MainActor in
+                self?.updatePanelPosition()
+            }
         }
         windowObservers.append(resizeObserver)
     }

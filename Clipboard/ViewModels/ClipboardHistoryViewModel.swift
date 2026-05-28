@@ -78,7 +78,12 @@ class ClipboardHistoryViewModel: ObservableObject {
 
         // 按得分降序排序
         filteredItems = matchedItems
-            .sorted { $0.1 > $1.1 }
+            .sorted {
+                if $0.0.isPinned != $1.0.isPinned {
+                    return $0.0.isPinned
+                }
+                return $0.1 > $1.1
+            }
             .map { $0.0 }
     }
 
@@ -136,6 +141,21 @@ class ClipboardHistoryViewModel: ObservableObject {
     func deleteItem(_ item: ClipboardItem) async {
         do {
             try await DatabaseService.shared.delete(id: item.id)
+            NotificationCenter.default.post(
+                name: .clipboardItemDidDelete,
+                object: nil,
+                userInfo: ["itemId": item.id]
+            )
+            loadItems()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 切换置顶状态
+    func togglePinned(_ item: ClipboardItem) {
+        do {
+            try DatabaseService.shared.updatePinned(id: item.id, isPinned: !item.isPinned)
             loadItems()
         } catch {
             errorMessage = error.localizedDescription

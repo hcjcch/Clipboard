@@ -155,30 +155,31 @@ struct PreviewImageView: View {
 
     /// 加载图片
     private func loadImage() {
-        // 优先使用缩略图
+        if let imagePath = item.imagePath {
+            isLoading = true
+
+            Task {
+                let data = await ImageStorageService.shared.loadImage(imageId: imagePath)
+                if let data = data {
+                    self.imageData = data
+                    self.extractImageSize(from: data)
+                } else if let thumbnail = item.thumbnailData {
+                    self.imageData = thumbnail
+                    self.extractImageSize(from: thumbnail)
+                } else {
+                    self.errorMessage = "加载图片失败"
+                }
+                self.isLoading = false
+            }
+            return
+        }
+
+        // 兼容旧数据：没有原图文件时使用数据库中的缩略图/历史图片数据
         if let thumbnail = item.thumbnailData {
             imageData = thumbnail
             extractImageSize(from: thumbnail)
-            return
-        }
-
-        // 加载原图
-        guard let imagePath = item.imagePath else {
+        } else {
             errorMessage = "图片文件不存在"
-            return
-        }
-
-        isLoading = true
-
-        Task {
-            let data = await ImageStorageService.shared.loadImage(imageId: imagePath)
-            if let data = data {
-                self.imageData = data
-                self.extractImageSize(from: data)
-            } else {
-                self.errorMessage = "加载图片失败"
-            }
-            self.isLoading = false
         }
     }
 

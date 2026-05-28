@@ -142,7 +142,7 @@ struct ClipboardHistoryView: View {
     private var itemsList: some View {
         ScrollView {
             ScrollViewReader { proxy in
-                LazyVStack(spacing: 4) {
+                LazyVStack(spacing: 6) {
                     ForEach(Array(viewModel.filteredItems.enumerated()), id: \.element.id) { index, item in
                         ClipboardItemRowView(
                             viewModel: ClipboardItemViewModel(
@@ -156,7 +156,8 @@ struct ClipboardHistoryView: View {
                         .id(item.id)  // 用于滚动定位
                     }
                 }
-                .padding(8)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
                 .onChange(of: viewModel.selectedItemIndex) { _, newIndex in
                     // 滚动到选中项
                     guard let index = newIndex,

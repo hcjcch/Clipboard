@@ -35,6 +35,11 @@ class ClipboardItemViewModel: ObservableObject {
     func delete() async {
         do {
             try await DatabaseService.shared.delete(id: item.id, imagePath: item.imagePath)
+            NotificationCenter.default.post(
+                name: .clipboardItemDidDelete,
+                object: nil,
+                userInfo: ["itemId": item.id]
+            )
             onDelete()
             print("已删除剪贴板项: \(item.id)")
         } catch {

@@ -67,9 +67,11 @@ struct HiddenInputField: NSViewRepresentable {
                 object: nil,
                 queue: .main
             ) { [weak self] _ in
-                guard let self = self else { return }
-                self.shouldClear = true
-                self.text = ""
+                MainActor.assumeIsolated {
+                    guard let self = self else { return }
+                    self.shouldClear = true
+                    self.text = ""
+                }
             }
 
             // 监听窗口获得焦点通知
@@ -77,13 +79,14 @@ struct HiddenInputField: NSViewRepresentable {
                 forName: NSWindow.didBecomeKeyNotification,
                 object: nil,
                 queue: .main
-            ) { [weak self] notification in
-                guard let self = self,
-                      let window = notification.object as? NSWindow,
-                      self.textField?.window === window else { return }
-                // 窗口获得焦点时，延迟设置 textField 焦点
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    self.textField?.becomeFirstResponder()
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self = self,
+                          self.textField?.window?.isKeyWindow == true else { return }
+                    // 窗口获得焦点时，延迟设置 textField 焦点
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        self.textField?.becomeFirstResponder()
+                    }
                 }
             }
         }

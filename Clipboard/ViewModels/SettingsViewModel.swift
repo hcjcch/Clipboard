@@ -63,7 +63,8 @@ final class SettingsViewModel {
     /// 恢复默认快捷键
     func resetToDefault() {
         hotKeyError = nil
-        userSettings = .default
+        userSettings.customHotKey = .controlCommandV
+        userSettings.isCustomHotKeyEnabled = false
 
         // 更新 UserSettingsService
         UserSettingsService.shared.resetToDefault()
@@ -72,6 +73,21 @@ final class SettingsViewModel {
         HotKeyManager.shared.resetToDefault()
 
         print("✅ 已恢复默认快捷键")
+    }
+
+    /// 更新最大历史记录数量
+    func updateMaxHistoryItems(_ maxItems: Int) {
+        userSettings.maxHistoryItems = maxItems
+        UserSettingsService.shared.updateMaxHistoryItems(maxItems)
+
+        Task {
+            do {
+                try await DatabaseService.shared.cleanupOldItems()
+                ClipboardHistoryViewModel.shared.loadItems()
+            } catch {
+                print("❌ 清理历史记录失败: \(error.localizedDescription)")
+            }
+        }
     }
 
     /// 开始录制快捷键

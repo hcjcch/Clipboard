@@ -27,6 +27,15 @@
 "settings.hotkey.usage_step3" = "Press Escape or click cancel button to cancel recording";
 "settings.hotkey.usage_step4" = "Hotkey takes effect immediately, no need to restart the app";
 
+/* Settings - History */
+"settings.history" = "History";
+"settings.history.title" = "History Settings";
+"settings.history.limit" = "Maximum Items";
+"settings.history.limit_description" = "When the limit is exceeded, the oldest unpinned items are removed automatically";
+"settings.history.unlimited" = "Unlimited";
+"settings.history.pinned_note" = "Pinned items stay at the top of the list and are protected from automatic cleanup.";
+"settings.history.image_note" = "Images store originals as files while the database keeps lightweight thumbnails.";
+
 /* Status Bar */
 "statusbar.quit" = "Quit";
 "statusbar.settings" = "Settings";
@@ -45,6 +54,11 @@
 
 /* Search */
 "main.search.placeholder" = "Search...";
+"main.copy" = "Copy";
+"main.delete" = "Delete";
+"main.pin" = "Pin";
+"main.pinned" = "Pinned";
+"main.unpin" = "Unpin";
 
 /* Error */
 "error.unknown" = "Unknown error";

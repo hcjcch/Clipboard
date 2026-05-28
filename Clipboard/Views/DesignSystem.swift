@@ -26,6 +26,7 @@ enum DesignSystem {
         static let md: CGFloat = 8
         static let lg: CGFloat = 10
         static let xl: CGFloat = 12
+        static let xxl: CGFloat = 16
     }
 
     // MARK: - 阴影
@@ -65,6 +66,11 @@ enum DesignSystem {
         static let background = Color(NSColor.windowBackgroundColor)
         static let backgroundSecondary = Color(NSColor.controlBackgroundColor)
         static let searchField = Color(NSColor.textBackgroundColor).opacity(0.8)
+        static let panelBackground = Color(nsColor: .windowBackgroundColor)
+        static let rowBackground = Color(nsColor: .controlBackgroundColor).opacity(0.45)
+        static let rowHover = Color.primary.opacity(0.045)
+        static let rowSelected = Color.accentColor.opacity(0.065)
+        static let rowSelectedStroke = Color.accentColor.opacity(0.16)
 
         // 强调色渐变
         static let accentGradient = LinearGradient(
@@ -87,6 +93,7 @@ enum DesignSystem {
         static let textPrimary = Color.primary
         static let textSecondary = Color.secondary
         static let textTertiary = Color(nsColor: .tertiaryLabelColor)
+        static let separator = Color(nsColor: .separatorColor).opacity(0.45)
 
         // 错误颜色
         static let error = Color.red

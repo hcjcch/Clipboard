@@ -27,6 +27,15 @@
 "settings.hotkey.usage_step3" = "按 Escape 键或点击取消按钮取消录制";
 "settings.hotkey.usage_step4" = "快捷键设置后立即生效，无需重启应用";
 
+/* Settings - History */
+"settings.history" = "历史记录";
+"settings.history.title" = "历史记录设置";
+"settings.history.limit" = "最大保存数量";
+"settings.history.limit_description" = "超过上限后会自动清理最旧的未置顶项目";
+"settings.history.unlimited" = "不限";
+"settings.history.pinned_note" = "已置顶的项目会保留在列表顶部，并且不会被自动清理。";
+"settings.history.image_note" = "图片会将原图保存到文件，数据库只保存轻量缩略图。";
+
 /* Status Bar */
 "statusbar.quit" = "退出";
 "statusbar.settings" = "设置";
@@ -45,6 +54,11 @@
 
 /* Search */
 "main.search.placeholder" = "搜索...";
+"main.copy" = "复制";
+"main.delete" = "删除";
+"main.pin" = "置顶";
+"main.pinned" = "已置顶";
+"main.unpin" = "取消置顶";
 
 /* Error */
 "error.unknown" = "未知错误";

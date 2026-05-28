@@ -44,8 +44,7 @@ final class DatabaseService {
     private let createdAt = Expression<Date>("created_at")
     private let thumbnailData = Expression<Data?>("thumbnail_data")
     private let imagePath = Expression<String?>("image_path")
-
-    private let maxItems = 1000  // 最大存储条目数
+    private let isPinned = Expression<Bool>("is_pinned")
 
     private init() {
         setupDatabase()
@@ -92,6 +91,7 @@ final class DatabaseService {
             table.column(createdAt)
             table.column(thumbnailData)
             table.column(imagePath)
+            table.column(isPinned, defaultValue: false)
         })
 
         // 创建索引优化查询（如果不存在）
@@ -109,17 +109,36 @@ final class DatabaseService {
             // 列已存在或其他错误，忽略
             print("添加 image_path 列: \(error.localizedDescription)")
         }
+
+        do {
+            try db.run(items.addColumn(isPinned, defaultValue: false))
+        } catch {
+            // 列已存在或其他错误，忽略
+            print("添加 is_pinned 列: \(error.localizedDescription)")
+        }
     }
 
     /// 插入剪贴板项
-    func insert(_ item: ClipboardItem) throws {
+    func insert(_ item: ClipboardItem) async throws {
         guard let db = db else {
             throw DatabaseError.connectionFailed("数据库未初始化")
         }
 
         // 检查是否与最新项重复
-        if let latest = try fetchLatest(), latest.isContentEqual(to: item) {
-            return
+        if let latest = try fetchLatest() {
+            if latest.isContentEqual(to: item) {
+                await discardStoredImageIfNeeded(for: item)
+                return
+            }
+
+            if isTransientScreenshotPair(latest, item) {
+                if item.type == .file, latest.type == .image {
+                    try await delete(id: latest.id, imagePath: latest.imagePath)
+                } else {
+                    await discardStoredImageIfNeeded(for: item)
+                    return
+                }
+            }
         }
 
         // 插入新项
@@ -129,13 +148,14 @@ final class DatabaseService {
             type <- item.type.rawValue,
             createdAt <- item.createdAt,
             thumbnailData <- item.thumbnailData,
-            imagePath <- item.imagePath
+            imagePath <- item.imagePath,
+            isPinned <- item.isPinned
         )
 
         try db.run(insert)
 
         // 检查并清理旧数据
-        try cleanupOldItems()
+        try await cleanupOldItems()
     }
 
     /// 获取所有剪贴板项（按时间倒序）
@@ -144,19 +164,10 @@ final class DatabaseService {
             throw DatabaseError.connectionFailed("数据库未初始化")
         }
 
-        let query = items.order(createdAt.desc)
+        let query = items.order(isPinned.desc, createdAt.desc)
         let rows = try db.prepare(query)
 
-        return rows.map { row in
-            ClipboardItem(
-                id: row[id],
-                content: row[content],
-                type: ClipboardItemType(rawValue: row[type]) ?? .text,
-                createdAt: row[createdAt],
-                thumbnailData: row[thumbnailData],
-                imagePath: row[imagePath]
-            )
-        }
+        return rows.map { item(from: $0) }
     }
 
     /// 获取最新的一项
@@ -172,14 +183,17 @@ final class DatabaseService {
             return nil
         }
 
-        return ClipboardItem(
-            id: row[id],
-            content: row[content],
-            type: ClipboardItemType(rawValue: row[type]) ?? .text,
-            createdAt: row[createdAt],
-            thumbnailData: row[thumbnailData],
-            imagePath: row[imagePath]
-        )
+        return item(from: row)
+    }
+
+    /// 更新置顶状态
+    func updatePinned(id: String, isPinned: Bool) throws {
+        guard let db = db else {
+            throw DatabaseError.connectionFailed("数据库未初始化")
+        }
+
+        let item = items.filter(self.id == id)
+        try db.run(item.update(self.isPinned <- isPinned))
     }
 
     /// 根据ID删除项
@@ -230,18 +244,37 @@ final class DatabaseService {
     }
 
     /// 清理旧数据，保持最大条目数限制
-    private func cleanupOldItems() throws {
+    func cleanupOldItems() async throws {
         guard let db = db else {
             throw DatabaseError.connectionFailed("数据库未初始化")
         }
 
+        let maxItems = UserSettingsService.shared.userSettings.maxHistoryItems
+        guard maxItems > 0 else { return }
+
         // 获取当前总数
         let count = try db.scalar(items.count)
 
-        if count > maxItems {
-            // 删除最旧的项
-            let oldItems = items.order(createdAt.asc).limit(count - maxItems)
-            try db.run(oldItems.delete())
+        guard count > maxItems else { return }
+
+        let deleteCount = count - maxItems
+        let oldItems = items
+            .filter(isPinned == false)
+            .order(createdAt.asc)
+            .limit(deleteCount)
+
+        let rows = Array(try db.prepare(oldItems))
+        let imageIds = rows.compactMap { $0[imagePath] }
+        let ids = rows.map { $0[id] }
+
+        guard !ids.isEmpty else { return }
+
+        for itemId in ids {
+            try db.run(items.filter(self.id == itemId).delete())
+        }
+
+        for imageId in imageIds {
+            await ImageStorageService.shared.deleteImage(imageId: imageId)
         }
     }
 
@@ -253,19 +286,53 @@ final class DatabaseService {
 
         let query = items
             .filter(content.like("%\(keyword)%"))
-            .order(createdAt.desc)
+            .order(isPinned.desc, createdAt.desc)
 
         let rows = try db.prepare(query)
 
-        return rows.map { row in
-            ClipboardItem(
-                id: row[id],
-                content: row[content],
-                type: ClipboardItemType(rawValue: row[type]) ?? .text,
-                createdAt: row[createdAt],
-                thumbnailData: row[thumbnailData],
-                imagePath: row[imagePath]
-            )
+        return rows.map { item(from: $0) }
+    }
+
+    private func item(from row: Row) -> ClipboardItem {
+        ClipboardItem(
+            id: row[id],
+            content: row[content],
+            type: ClipboardItemType(rawValue: row[type]) ?? .text,
+            createdAt: row[createdAt],
+            thumbnailData: row[thumbnailData],
+            imagePath: row[imagePath],
+            isPinned: row[isPinned]
+        )
+    }
+
+    /// macOS 截图保存可能短时间内连续写入图片数据和图片文件引用，只保留一条历史。
+    private func isTransientScreenshotPair(_ latest: ClipboardItem, _ item: ClipboardItem) -> Bool {
+        let interval = abs(item.createdAt.timeIntervalSince(latest.createdAt))
+        guard interval <= 2.0 else { return false }
+        guard isImageRepresentable(latest), isImageRepresentable(item) else { return false }
+
+        return latest.type == .image || item.type == .image
+    }
+
+    private func isImageRepresentable(_ item: ClipboardItem) -> Bool {
+        switch item.type {
+        case .image:
+            return true
+        case .file:
+            return isImageFilePath(item.content)
+        case .text:
+            return false
         }
+    }
+
+    private func isImageFilePath(_ path: String) -> Bool {
+        let imageExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "heic", "heif"]
+        let fileExtension = URL(fileURLWithPath: path).pathExtension.lowercased()
+        return imageExtensions.contains(fileExtension)
+    }
+
+    private func discardStoredImageIfNeeded(for item: ClipboardItem) async {
+        guard let imageId = item.imagePath else { return }
+        await ImageStorageService.shared.deleteImage(imageId: imageId)
     }
 }

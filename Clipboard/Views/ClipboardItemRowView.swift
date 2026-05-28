@@ -27,10 +27,10 @@ struct ClipboardItemRowView: View {
     var isKeyboardNavigating: Bool = false
 
     var body: some View {
-        HStack(spacing: DesignSystem.Spacing.md) {
+        HStack(alignment: .center, spacing: 14) {
             // 图标/缩略图
             iconView
-                .frame(width: 36, height: 36)
+                .frame(width: 44, height: 44)
 
             // 内容预览
             contentView
@@ -39,27 +39,22 @@ struct ClipboardItemRowView: View {
             // 操作按钮
             actionButtons
         }
-        .padding(.horizontal, DesignSystem.Spacing.md)
-        .padding(.vertical, DesignSystem.Spacing.sm)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
         .background(
             ZStack {
-                // 键盘选中背景（优先级最高）
-                if isSelected && isKeyboardNavigating {
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .fill(Color.accentColor.opacity(0.15))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(rowBackgroundColor)
 
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .stroke(Color.accentColor, lineWidth: 1.5)
-                }
-                // 鼠标悬停背景（只在非键盘导航时显示）
-                else if isHovering {
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .fill(Color.accentColor.opacity(0.08))
-
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
-                }
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(rowStrokeColor, lineWidth: isSelected && isKeyboardNavigating ? 1.25 : 1)
             }
+        )
+        .shadow(
+            color: rowShadowColor,
+            radius: isSelected && isKeyboardNavigating ? 8 : 0,
+            x: 0,
+            y: 3
         )
         .offset(x: isDeleting ? 400 : 0)
         .opacity(isDeleting ? 0 : 1)
@@ -96,11 +91,17 @@ struct ClipboardItemRowView: View {
                     ClipboardWindowManager.shared.hideWindow()
                 }
             }) {
-                Label("复制", systemImage: "doc.on.doc")
+                Label(LString("main.copy"), systemImage: "doc.on.doc")
             }
             Divider()
+            Button(action: { togglePinned() }) {
+                Label(
+                    viewModel.item.isPinned ? LString("main.unpin") : LString("main.pin"),
+                    systemImage: viewModel.item.isPinned ? "pin.slash" : "pin"
+                )
+            }
             Button(role: .destructive, action: { performDelete() }) {
-                Label("删除", systemImage: "trash")
+                Label(LString("main.delete"), systemImage: "trash")
             }
         }
         .onChange(of: historyViewModel.animatingItemId) { _, animatingId in
@@ -111,6 +112,34 @@ struct ClipboardItemRowView: View {
                 }
             }
         }
+    }
+
+    private var rowBackgroundColor: Color {
+        if isSelected && isKeyboardNavigating {
+            return DesignSystem.Colors.rowSelected
+        }
+        if isHovering {
+            return DesignSystem.Colors.rowHover
+        }
+        return Color.clear
+    }
+
+    private var rowStrokeColor: Color {
+        if isSelected && isKeyboardNavigating {
+            return DesignSystem.Colors.rowSelectedStroke
+        }
+        if isHovering {
+            return DesignSystem.Colors.separator
+        }
+        return Color.clear
+    }
+
+    private var rowShadowColor: Color {
+        isSelected && isKeyboardNavigating ? Color.accentColor.opacity(0.08) : Color.clear
+    }
+
+    private var showsActionButtons: Bool {
+        isHovering || (isSelected && isKeyboardNavigating)
     }
 
     /// 执行删除（带动画）
@@ -126,6 +155,32 @@ struct ClipboardItemRowView: View {
             try? await Task.sleep(nanoseconds: 250_000_000) // 0.25秒
             await viewModel.delete()
         }
+    }
+
+    private func togglePinned() {
+        historyViewModel.togglePinned(viewModel.item)
+    }
+
+    private var pinButton: some View {
+        Button(action: { togglePinned() }) {
+            Image(systemName: viewModel.item.isPinned ? "pin.fill" : "pin")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(viewModel.item.isPinned ? Color.accentColor : DesignSystem.Colors.textTertiary)
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(viewModel.item.isPinned ? Color.accentColor.opacity(0.12) : Color.secondary.opacity(isHovering ? 0.08 : 0.04))
+                )
+                .overlay(
+                    Circle()
+                        .stroke(viewModel.item.isPinned ? Color.accentColor.opacity(0.22) : Color.secondary.opacity(0.08), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .help(viewModel.item.isPinned ? LString("main.unpin") : LString("main.pin"))
+        .opacity(viewModel.item.isPinned || showsActionButtons ? 1 : 0)
+        .allowsHitTesting(viewModel.item.isPinned || showsActionButtons)
+        .animation(DesignSystem.Animation.quick, value: showsActionButtons)
     }
 
     /// 显示成功动画
@@ -159,13 +214,22 @@ struct ClipboardItemRowView: View {
     private var iconView: some View {
         ZStack {
             // 渐变背景
-            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
-                .fill(DesignSystem.Colors.iconGradient)
-                .frame(width: 36, height: 36)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.accentColor.opacity(0.16),
+                            Color.accentColor.opacity(0.07)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 44, height: 44)
 
             // 图标
             Image(systemName: viewModel.item.type.iconName)
-                .font(.system(size: 16, weight: .medium))
+                .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(Color.accentColor)
                 .opacity(isShowingSuccessCheck ? 0 : 1)
                 .scaleEffect(isShowingSuccessCheck ? 0.3 : 1)
@@ -180,10 +244,10 @@ struct ClipboardItemRowView: View {
             }
         }
         .shadow(
-            color: Color.accentColor.opacity(0.15),
-            radius: 3,
+            color: Color.accentColor.opacity(0.08),
+            radius: 4,
             x: 0,
-            y: 1
+            y: 2
         )
     }
 
@@ -191,26 +255,18 @@ struct ClipboardItemRowView: View {
         HStack(spacing: DesignSystem.Spacing.md) {
             switch viewModel.item.type {
             case .text:
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(viewModel.highlightedPreview)
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .lineLimit(2)
                         .foregroundStyle(DesignSystem.Colors.textPrimary)
+                        .lineSpacing(2)
 
-                    // 时间标签
-                    HStack(spacing: DesignSystem.Spacing.xs) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 9))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-
-                        Text(viewModel.formattedTime)
-                            .font(.system(size: 11))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    }
+                    metadataView
                 }
 
             case .file:
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                VStack(alignment: .leading, spacing: 6) {
                     // 检查是否为图片文件（有缩略图）
                     if let thumbnailData = viewModel.item.thumbnailData,
                        let nsImage = NSImage(data: thumbnailData) {
@@ -224,7 +280,7 @@ struct ClipboardItemRowView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(URL(fileURLWithPath: viewModel.item.content).lastPathComponent)
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 14))
                                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                                     .lineLimit(1)
 
@@ -239,11 +295,11 @@ struct ClipboardItemRowView: View {
                         HStack(spacing: DesignSystem.Spacing.xs) {
                             Image(systemName: "doc.fill")
                                 .font(.system(size: 12))
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(DesignSystem.Colors.textTertiary)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(URL(fileURLWithPath: viewModel.item.content).lastPathComponent)
-                                    .font(.system(size: 13))
+                                    .font(.system(size: 14))
                                     .foregroundStyle(DesignSystem.Colors.textPrimary)
                                     .lineLimit(1)
 
@@ -255,20 +311,11 @@ struct ClipboardItemRowView: View {
                         }
                     }
 
-                    // 时间标签
-                    HStack(spacing: DesignSystem.Spacing.xs) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 9))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-
-                        Text(viewModel.formattedTime)
-                            .font(.system(size: 11))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    }
+                    metadataView
                 }
 
             case .image:
-                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                VStack(alignment: .leading, spacing: 6) {
                     // 图片预览
                     let displayData = imageData ?? viewModel.item.thumbnailData
 
@@ -278,8 +325,13 @@ struct ClipboardItemRowView: View {
                             Image(nsImage: validImage)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 60, height: 60)
-                                .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm))
+                                .frame(width: 84, height: 56)
+                                .background(Color.white.opacity(0.55))
+                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .stroke(DesignSystem.Colors.separator, lineWidth: 1)
+                                )
                                 .onAppear {
                                     print("✅ 图片显示成功: \(data.count) bytes, size: \(validImage.size)")
                                 }
@@ -314,22 +366,23 @@ struct ClipboardItemRowView: View {
                         }
                     }
 
-                    // 时间标签
-                    HStack(spacing: DesignSystem.Spacing.xs) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 9))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-
-                        Text(viewModel.formattedTime)
-                            .font(.system(size: 11))
-                            .foregroundStyle(DesignSystem.Colors.textTertiary)
-                    }
+                    metadataView
                 }
             }
         }
         .task {
             loadImageIfNeeded()
         }
+    }
+
+    private var metadataView: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "clock")
+                .font(.system(size: 10))
+            Text(viewModel.formattedTime)
+                .font(.system(size: 12))
+        }
+        .foregroundStyle(DesignSystem.Colors.textTertiary)
     }
 
     /// 加载图片（如果需要从文件读取）
@@ -358,7 +411,7 @@ struct ClipboardItemRowView: View {
     }
 
     private var actionButtons: some View {
-        HStack(spacing: DesignSystem.Spacing.xs) {
+        HStack(spacing: 6) {
             // 复制按钮
             Button(action: {
                 viewModel.copyToClipboard()
@@ -367,42 +420,42 @@ struct ClipboardItemRowView: View {
                     ClipboardWindowManager.shared.hideWindow()
                 }
             }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.1))
-                        .frame(width: 26, height: 26)
-
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.accentColor)
-                }
+                actionIcon("doc.on.doc", color: .accentColor)
             }
             .buttonStyle(.plain)
-            .help("复制")
-            .opacity(isHovering ? 1 : 0)
-            .animation(DesignSystem.Animation.quick, value: isHovering)
+            .help(LString("main.copy"))
+            .opacity(showsActionButtons ? 1 : 0)
+            .allowsHitTesting(showsActionButtons)
+            .animation(DesignSystem.Animation.quick, value: showsActionButtons)
 
             // 删除按钮
             Button(role: .destructive, action: { performDelete() }) {
-                ZStack {
-                    Circle()
-                        .fill(Color.red.opacity(0.1))
-                        .frame(width: 26, height: 26)
-
-                    Image(systemName: "trash")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.red)
-                }
+                actionIcon("trash", color: .red)
             }
             .buttonStyle(.plain)
-            .help("删除")
+            .help(LString("main.delete"))
             .disabled(isDeleting)
-            .opacity(isHovering && !isDeleting ? 1 : 0)
+            .opacity(showsActionButtons && !isDeleting ? 1 : 0)
+            .allowsHitTesting(showsActionButtons && !isDeleting)
             .animation(
                 DesignSystem.Animation.quick.delay(0.05),
-                value: isHovering
+                value: showsActionButtons
             )
+
+            pinButton
         }
+        .frame(width: 96, alignment: .trailing)
+    }
+
+    private func actionIcon(_ systemName: String, color: Color) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(color)
+            .frame(width: 28, height: 28)
+            .background(
+                Circle()
+                    .fill(color.opacity(0.10))
+            )
     }
 }
 
