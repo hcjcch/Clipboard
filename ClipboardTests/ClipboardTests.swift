@@ -10,8 +10,30 @@ import Testing
 
 struct ClipboardTests {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    @Test func fuzzyMatcherPreservesMatchingStrategies() {
+        #expect(FuzzyMatcher.match("feature/home", keyword: "fh").matched)
+        #expect(FuzzyMatcher.match("clipboard history", keyword: "clip hist").matched)
+        #expect(FuzzyMatcher.match("performance", keyword: "performnce").matched)
+    }
+
+    @Test func fuzzyMatcherRejectsUnrelatedContent() {
+        let result = FuzzyMatcher.match(
+            "a large clipboard history item",
+            keyword: "completely-unrelated"
+        )
+
+        #expect(!result.matched)
+    }
+
+    @Test func fuzzyMatcherHandlesLargeNonMatchingContent() {
+        let content = Array(
+            repeating: "substantially-long-unrelated-token",
+            count: 5_000
+        ).joined(separator: " ")
+
+        let result = FuzzyMatcher.match(content, keyword: "xyz")
+
+        #expect(!result.matched)
     }
 
 }

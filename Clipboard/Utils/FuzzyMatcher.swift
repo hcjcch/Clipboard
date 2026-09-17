@@ -176,7 +176,7 @@ struct FuzzyMatcher {
         // 快速失败：关键词字符数不能超过单词数
         guard keyword.count <= words.count else { return nil }
 
-        var keywordChars = Array(keyword.lowercased())
+        let keywordChars = Array(keyword.lowercased())
         var matchedRanges: [Range<String.Index>] = []
         var currentWordIndex = 0
         var searchPosition = startIndex
@@ -273,7 +273,15 @@ struct FuzzyMatcher {
         let words = substring.components(separatedBy: .whitespacesAndNewlines)
 
         for word in words {
-            let distance = levenshteinDistance(word.lowercased(), keyword)
+            if Task.isCancelled {
+                return nil
+            }
+
+            let distance = levenshteinDistance(
+                word.lowercased(),
+                keyword,
+                maximumDistance: maxDistance
+            )
             if distance <= maxDistance {
                 if let range = text.range(of: word, options: .caseInsensitive) {
                     return range
@@ -284,8 +292,12 @@ struct FuzzyMatcher {
         return nil
     }
 
-    /// 计算编辑距离（Levenshtein Distance）
-    private static func levenshteinDistance(_ s1: String, _ s2: String) -> Int {
+    /// 计算有上限的编辑距离，仅保留两行以降低搜索时的内存和 CPU 开销
+    private static func levenshteinDistance(
+        _ s1: String,
+        _ s2: String,
+        maximumDistance: Int
+    ) -> Int {
         let s1Array = Array(s1)
         let s2Array = Array(s2)
         let s1Count = s1Array.count
@@ -294,29 +306,35 @@ struct FuzzyMatcher {
         // 边界情况：任一字符串为空
         if s1Count == 0 { return s2Count }
         if s2Count == 0 { return s1Count }
-
-        var matrix = Array(repeating: Array(repeating: 0, count: s2Count + 1), count: s1Count + 1)
-
-        for i in 0...s1Count {
-            matrix[i][0] = i
+        if abs(s1Count - s2Count) > maximumDistance {
+            return maximumDistance + 1
         }
 
-        for j in 0...s2Count {
-            matrix[0][j] = j
-        }
+        var previousRow = Array(0...s2Count)
+        var currentRow = Array(repeating: 0, count: s2Count + 1)
 
         for i in 1...s1Count {
+            currentRow[0] = i
+            var rowMinimum = i
+
             for j in 1...s2Count {
                 let cost = s1Array[i - 1] == s2Array[j - 1] ? 0 : 1
-                matrix[i][j] = min(
-                    matrix[i - 1][j] + 1,      // 删除
-                    matrix[i][j - 1] + 1,      // 插入
-                    matrix[i - 1][j - 1] + cost // 替换
+                currentRow[j] = min(
+                    previousRow[j] + 1,
+                    currentRow[j - 1] + 1,
+                    previousRow[j - 1] + cost
                 )
+                rowMinimum = min(rowMinimum, currentRow[j])
             }
+
+            if rowMinimum > maximumDistance {
+                return maximumDistance + 1
+            }
+
+            swap(&previousRow, &currentRow)
         }
 
-        return matrix[s1Count][s2Count]
+        return previousRow[s2Count]
     }
 
     /// 计算位置奖励（匹配越靠前，得分越高）

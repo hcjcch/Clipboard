@@ -140,37 +140,52 @@ struct ClipboardHistoryView: View {
     }
 
     private var itemsList: some View {
-        ScrollView {
-            ScrollViewReader { proxy in
-                LazyVStack(spacing: 6) {
-                    ForEach(Array(viewModel.filteredItems.enumerated()), id: \.element.id) { index, item in
-                        ClipboardItemRowView(
-                            viewModel: ClipboardItemViewModel(
-                                item: item,
-                                onDelete: { loadItems() },
-                                searchKeyword: viewModel.searchText
-                            ),
-                            isSelected: viewModel.selectedItemIndex == index,
-                            isKeyboardNavigating: viewModel.isKeyboardNavigating
-                        )
-                        .id(item.id)  // 用于滚动定位
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .onChange(of: viewModel.selectedItemIndex) { _, newIndex in
-                    // 滚动到选中项
-                    guard let index = newIndex,
-                          index < viewModel.filteredItems.count else { return }
-
-                    let selectedItem = viewModel.filteredItems[index]
-                    withAnimation(DesignSystem.Animation.quick) {
-                        proxy.scrollTo(selectedItem.id, anchor: .center)
+        ScrollViewReader { proxy in
+            List {
+                ForEach(viewModel.filteredItems) { item in
+                    ClipboardItemRowView(
+                        viewModel: ClipboardItemViewModel(
+                            item: item,
+                            onDelete: { loadItems() },
+                            searchKeyword: viewModel.searchText
+                        ),
+                        isSelected: viewModel.selectedItemID == item.id,
+                        isKeyboardNavigating: viewModel.isKeyboardNavigating
+                    )
+                    .id(item.id)
+                    .listRowInsets(
+                        EdgeInsets(top: 3, leading: 14, bottom: 3, trailing: 14)
+                    )
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .onAppear {
+                        viewModel.loadNextPageIfNeeded(currentItem: item)
                     }
 
-                    // 键盘导航时显示预览
-                    viewModel.onItemFocused(selectedItem)
                 }
+
+                if viewModel.isLoadingNextPage {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(maxWidth: .infinity)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .onChange(of: viewModel.selectedItemIndex) { _, newIndex in
+                // 滚动到选中项
+                guard let index = newIndex,
+                      index < viewModel.filteredItems.count else { return }
+
+                let selectedItem = viewModel.filteredItems[index]
+                withAnimation(DesignSystem.Animation.quick) {
+                    proxy.scrollTo(selectedItem.id, anchor: .center)
+                }
+
+                // 键盘导航时显示预览
+                viewModel.onItemFocused(selectedItem)
             }
         }
     }

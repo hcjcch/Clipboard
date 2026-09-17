@@ -9,7 +9,7 @@ import AppKit
 import Foundation
 
 /// 剪贴板项数据模型
-struct ClipboardItem: Identifiable, Codable, Equatable {
+struct ClipboardItem: Identifiable, Codable, Equatable, Sendable {
     let id: String
     let content: String
     let type: ClipboardItemType

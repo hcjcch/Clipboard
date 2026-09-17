@@ -20,7 +20,7 @@ struct ClipboardItemRowView: View {
     @State private var isDeleting = false
     @State private var isShowingSuccessCheck = false
     @State private var checkmarkScale: CGFloat = 0
-    @State private var imageData: Data?
+    @State private var loadedImage: NSImage?
 
     // 键盘导航状态
     var isSelected: Bool = false
@@ -257,8 +257,7 @@ struct ClipboardItemRowView: View {
             case .file:
                 VStack(alignment: .leading, spacing: 6) {
                     // 检查是否为图片文件（有缩略图）
-                    if let thumbnailData = viewModel.item.thumbnailData,
-                       let nsImage = NSImage(data: thumbnailData) {
+                    if let nsImage = loadedImage ?? viewModel.thumbnailImage {
                         // 显示图片缩略图
                         HStack(spacing: DesignSystem.Spacing.xs) {
                             Image(nsImage: nsImage)
@@ -306,39 +305,17 @@ struct ClipboardItemRowView: View {
             case .image:
                 VStack(alignment: .leading, spacing: 6) {
                     // 图片预览
-                    let displayData = imageData ?? viewModel.item.thumbnailData
-
-                    if let data = displayData {
-                        let nsImage = NSImage(data: data)
-                        if let validImage = nsImage {
-                            Image(nsImage: validImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 84, height: 56)
-                                .background(Color.white.opacity(0.55))
-                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                        .stroke(DesignSystem.Colors.separator, lineWidth: 1)
-                                )
-                                .onAppear {
-                                    print("✅ 图片显示成功: \(data.count) bytes, size: \(validImage.size)")
-                                }
-                        } else {
-                            // NSImage 创建失败
-                            HStack(spacing: DesignSystem.Spacing.xs) {
-                                Image(systemName: "photo.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(Color.accentColor)
-
-                                Text("图片")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(DesignSystem.Colors.textSecondary)
-                            }
-                            .onAppear {
-                                print("❌ NSImage 创建失败 - data: \(data.count) bytes")
-                            }
-                        }
+                    if let displayImage = loadedImage ?? viewModel.thumbnailImage {
+                        Image(nsImage: displayImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 84, height: 56)
+                            .background(Color.white.opacity(0.55))
+                            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                    .stroke(DesignSystem.Colors.separator, lineWidth: 1)
+                            )
                     } else {
                         // 没有数据
                         HStack(spacing: DesignSystem.Spacing.xs) {
@@ -350,17 +327,14 @@ struct ClipboardItemRowView: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(DesignSystem.Colors.textSecondary)
                         }
-                        .onAppear {
-                            print("❌ 无图片数据 - imageData: \(imageData?.count ?? 0), thumbnailData: \(viewModel.item.thumbnailData?.count ?? 0)")
-                        }
                     }
 
                     metadataView
                 }
             }
         }
-        .task {
-            loadImageIfNeeded()
+        .task(id: viewModel.item.id) {
+            await loadImageIfNeeded()
         }
     }
 
@@ -375,28 +349,25 @@ struct ClipboardItemRowView: View {
     }
 
     /// 加载图片（如果需要从文件读取）
-    private func loadImageIfNeeded() {
-        // 直接检查并打印状态
-        print("loadImageIfNeeded - thumbnailData: \(viewModel.item.thumbnailData?.count ?? 0), imagePath: \(viewModel.item.imagePath?.description ?? "nil")")
-
-        // 如果已经有 thumbnailData，直接设置
-        if let data = viewModel.item.thumbnailData {
-            imageData = data
-            print("✅ 已设置 imageData: \(data.count) 字节")
+    private func loadImageIfNeeded() async {
+        guard viewModel.thumbnailImage == nil else {
             return
         }
 
-        // 如果有 imagePath，从文件加载
-        if let imageId = viewModel.item.imagePath {
-            print("从文件加载图片: \(imageId)")
-            Task { @MainActor in
-                let data = await ImageStorageService.shared.loadImage(imageId: imageId)
-                self.imageData = data
-                print("✅ 文件加载完成: \(data?.count ?? 0) 字节")
-            }
-        } else {
-            print("❌ 没有图片来源")
+        if let thumbnailData = try? await DatabaseService.shared.fetchThumbnail(id: viewModel.item.id),
+           let thumbnailImage = NSImage(data: thumbnailData) {
+            guard !Task.isCancelled else { return }
+            loadedImage = thumbnailImage
+            return
         }
+
+        guard let imageId = viewModel.item.imagePath,
+              let data = await ImageStorageService.shared.loadImage(imageId: imageId),
+              !Task.isCancelled else {
+            return
+        }
+
+        loadedImage = NSImage(data: data)
     }
 
     private var actionButtons: some View {

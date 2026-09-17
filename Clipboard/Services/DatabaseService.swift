@@ -29,9 +29,14 @@ enum DatabaseError: Error, LocalizedError {
     }
 }
 
+/// 分页查询结果
+struct ClipboardPage: Sendable {
+    let items: [ClipboardItem]
+    let hasMore: Bool
+}
+
 /// 数据库服务类
-@MainActor
-final class DatabaseService {
+actor DatabaseService {
     static let shared = DatabaseService()
 
     private var db: Connection?
@@ -47,11 +52,6 @@ final class DatabaseService {
     private let isPinned = Expression<Bool>("is_pinned")
 
     private init() {
-        setupDatabase()
-    }
-
-    /// 设置数据库
-    private func setupDatabase() {
         do {
             // 获取应用支持目录
             let fileManager = FileManager.default
@@ -67,54 +67,46 @@ final class DatabaseService {
             let dbPath = appDirectory.appendingPathComponent("clipboard.sqlite3")
 
             // 连接数据库
-            db = try Connection(dbPath.path)
+            let connection = try Connection(dbPath.path)
+            db = connection
 
             // 创建表
-            try createTable()
+            try connection.run(items.create(ifNotExists: true) { table in
+                table.column(id, primaryKey: true)
+                table.column(content)
+                table.column(type)
+                table.column(createdAt)
+                table.column(thumbnailData)
+                table.column(imagePath)
+                table.column(isPinned, defaultValue: false)
+            })
+
+            // 创建索引优化查询（如果不存在）
+            do {
+                try connection.run(items.createIndex(createdAt, unique: false))
+            } catch {
+                // 索引已存在，忽略错误
+                print("索引已存在或创建失败: \(error.localizedDescription)")
+            }
+
+            // 添加新列（如果表已存在）
+            do {
+                try connection.run(items.addColumn(imagePath, defaultValue: nil))
+            } catch {
+                // 列已存在或其他错误，忽略
+                print("添加 image_path 列: \(error.localizedDescription)")
+            }
+
+            do {
+                try connection.run(items.addColumn(isPinned, defaultValue: false))
+            } catch {
+                // 列已存在或其他错误，忽略
+                print("添加 is_pinned 列: \(error.localizedDescription)")
+            }
 
             print("数据库初始化成功: \(dbPath.path)")
         } catch {
             print("数据库初始化失败: \(error.localizedDescription)")
-        }
-    }
-
-    /// 创建表
-    private func createTable() throws {
-        guard let db = db else {
-            throw DatabaseError.connectionFailed("数据库未初始化")
-        }
-
-        try db.run(items.create(ifNotExists: true) { table in
-            table.column(id, primaryKey: true)
-            table.column(content)
-            table.column(type)
-            table.column(createdAt)
-            table.column(thumbnailData)
-            table.column(imagePath)
-            table.column(isPinned, defaultValue: false)
-        })
-
-        // 创建索引优化查询（如果不存在）
-        do {
-            try db.run(items.createIndex(createdAt, unique: false))
-        } catch {
-            // 索引已存在，忽略错误
-            print("索引已存在或创建失败: \(error.localizedDescription)")
-        }
-
-        // 添加新列（如果表已存在）
-        do {
-            try db.run(items.addColumn(imagePath, defaultValue: nil))
-        } catch {
-            // 列已存在或其他错误，忽略
-            print("添加 image_path 列: \(error.localizedDescription)")
-        }
-
-        do {
-            try db.run(items.addColumn(isPinned, defaultValue: false))
-        } catch {
-            // 列已存在或其他错误，忽略
-            print("添加 is_pinned 列: \(error.localizedDescription)")
         }
     }
 
@@ -168,6 +160,24 @@ final class DatabaseService {
         let rows = try db.prepare(query)
 
         return rows.map { item(from: $0) }
+    }
+
+    /// 分页获取剪贴板项，避免一次把全部记录和缩略图载入内存
+    func fetchPage(offset: Int, limit: Int) throws -> ClipboardPage {
+        guard let db = db else {
+            throw DatabaseError.connectionFailed("数据库未初始化")
+        }
+
+        let safeOffset = max(0, offset)
+        let safeLimit = max(1, limit)
+        let query = items
+            .order(isPinned.desc, createdAt.desc)
+            .limit(safeLimit + 1, offset: safeOffset)
+        let rows = Array(try db.prepare(query))
+        let hasMore = rows.count > safeLimit
+        let pageItems = rows.prefix(safeLimit).map { item(from: $0) }
+
+        return ClipboardPage(items: pageItems, hasMore: hasMore)
     }
 
     /// 获取最新的一项
@@ -249,7 +259,9 @@ final class DatabaseService {
             throw DatabaseError.connectionFailed("数据库未初始化")
         }
 
-        let maxItems = UserSettingsService.shared.userSettings.maxHistoryItems
+        let maxItems = await MainActor.run {
+            UserSettingsService.shared.userSettings.maxHistoryItems
+        }
         guard maxItems > 0 else { return }
 
         // 获取当前总数
@@ -291,6 +303,69 @@ final class DatabaseService {
         let rows = try db.prepare(query)
 
         return rows.map { item(from: $0) }
+    }
+
+    /// 在数据库 actor 中执行可取消的模糊搜索，避免阻塞主线程
+    func fuzzySearch(keyword: String) throws -> [ClipboardItem] {
+        guard let db = db else {
+            throw DatabaseError.connectionFailed("数据库未初始化")
+        }
+
+        // 搜索阶段不读取缩略图 BLOB；命中项的缩略图由可见行按需加载。
+        let query = items
+            .select(id, content, type, createdAt, imagePath, isPinned)
+            .order(isPinned.desc, createdAt.desc)
+        let rows = try db.prepare(query)
+        var matchedItems: [(item: ClipboardItem, score: Double)] = []
+
+        for (index, row) in rows.enumerated() {
+            if index.isMultiple(of: 32) {
+                try Task.checkCancellation()
+            }
+
+            let itemContent = row[content]
+            let result = FuzzyMatcher.match(itemContent, keyword: keyword)
+            if result.matched {
+                let clipboardItem = ClipboardItem(
+                    id: row[id],
+                    content: itemContent,
+                    type: ClipboardItemType(rawValue: row[type]) ?? .text,
+                    createdAt: row[createdAt],
+                    thumbnailData: nil,
+                    imagePath: row[imagePath],
+                    isPinned: row[isPinned]
+                )
+                matchedItems.append((clipboardItem, result.score))
+            }
+        }
+
+        try Task.checkCancellation()
+
+        return matchedItems
+            .sorted {
+                if $0.item.isPinned != $1.item.isPinned {
+                    return $0.item.isPinned
+                }
+                if $0.score != $1.score {
+                    return $0.score > $1.score
+                }
+                return $0.item.createdAt > $1.item.createdAt
+            }
+            .map(\.item)
+    }
+
+    /// 按需读取单条记录的缩略图
+    func fetchThumbnail(id itemID: String) throws -> Data? {
+        guard let db = db else {
+            throw DatabaseError.connectionFailed("数据库未初始化")
+        }
+
+        let query = items
+            .select(thumbnailData)
+            .filter(id == itemID)
+            .limit(1)
+
+        return try db.pluck(query)?[thumbnailData]
     }
 
     private func item(from row: Row) -> ClipboardItem {

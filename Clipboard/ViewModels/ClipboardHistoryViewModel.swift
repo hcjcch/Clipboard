@@ -16,6 +16,7 @@ class ClipboardHistoryViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var filteredItems: [ClipboardItem] = []
     @Published var isLoading: Bool = false
+    @Published private(set) var isLoadingNextPage: Bool = false
     @Published var errorMessage: String?
 
     // 键盘导航状态
@@ -31,6 +32,12 @@ class ClipboardHistoryViewModel: ObservableObject {
     private let hoverState = HoverState()
 
     private var cancellables = Set<AnyCancellable>()
+    private var searchTask: Task<Void, Never>?
+    private var pageLoadTask: Task<Void, Never>?
+    private var nextPageOffset = 0
+    private var hasMorePages = true
+    private var loadGeneration = 0
+    private let pageSize = 100
 
     private init() {
         setupNotifications()
@@ -56,7 +63,7 @@ class ClipboardHistoryViewModel: ObservableObject {
         $searchText
             .debounce(for: .milliseconds(150), scheduler: DispatchQueue.main)
             .sink { [weak self] searchText in
-                self?.performSearch()
+                self?.performSearch(for: searchText)
                 // 搜索时重置选中状态
                 self?.resetSelection()
             }
@@ -64,47 +71,110 @@ class ClipboardHistoryViewModel: ObservableObject {
     }
 
     /// 执行搜索（更新 filteredItems）
-    private func performSearch() {
-        if searchText.isEmpty {
+    private func performSearch(for query: String) {
+        searchTask?.cancel()
+
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedQuery.isEmpty else {
             filteredItems = items
             return
         }
 
-        // 使用模糊匹配，并按匹配度排序
-        let matchedItems = items.compactMap { item -> (ClipboardItem, Double)? in
-            let result = FuzzyMatcher.match(item.content, keyword: searchText)
-            return result.matched ? (item, result.score) : nil
-        }
-
-        // 按得分降序排序
-        filteredItems = matchedItems
-            .sorted {
-                if $0.0.isPinned != $1.0.isPinned {
-                    return $0.0.isPinned
-                }
-                return $0.1 > $1.1
-            }
-            .map { $0.0 }
-    }
-
-    /// 加载剪贴板历史
-    func loadItems() {
-        isLoading = true
         errorMessage = nil
 
-        Task {
+        searchTask = Task { [weak self] in
+            guard let self else { return }
+
             do {
-                let fetchedItems = try await DatabaseService.shared.fetchAll()
-                self.items = fetchedItems
-                // 如果搜索框为空，更新 filteredItems
-                if searchText.isEmpty {
-                    self.filteredItems = fetchedItems
-                }
-                self.isLoading = false
+                let results = try await DatabaseService.shared.fuzzySearch(keyword: normalizedQuery)
+                try Task.checkCancellation()
+
+                guard searchText == query else { return }
+                filteredItems = results
+            } catch is CancellationError {
+                // 新搜索会取消旧任务，避免过期结果覆盖当前输入。
             } catch {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
+                guard !Task.isCancelled else { return }
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    /// 加载剪贴板历史的第一页
+    func loadItems() {
+        pageLoadTask?.cancel()
+        loadGeneration += 1
+        let generation = loadGeneration
+
+        nextPageOffset = 0
+        hasMorePages = true
+        isLoadingNextPage = false
+        isLoading = items.isEmpty
+        errorMessage = nil
+
+        pageLoadTask = Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                let page = try await DatabaseService.shared.fetchPage(offset: 0, limit: pageSize)
+                try Task.checkCancellation()
+                guard generation == loadGeneration else { return }
+
+                items = page.items
+                nextPageOffset = page.items.count
+                hasMorePages = page.hasMore
+                isLoading = false
+
+                if searchText.isEmpty {
+                    filteredItems = page.items
+                } else {
+                    performSearch(for: searchText)
+                }
+            } catch is CancellationError {
+                // 更新触发的新加载会替换旧任务。
+            } catch {
+                guard generation == loadGeneration else { return }
+                errorMessage = error.localizedDescription
+                isLoading = false
                 print("加载剪贴板历史失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// 当最后一行进入可视区域时加载下一页
+    func loadNextPageIfNeeded(currentItem: ClipboardItem) {
+        guard searchText.isEmpty,
+              hasMorePages,
+              !isLoadingNextPage,
+              currentItem.id == items.last?.id else {
+            return
+        }
+
+        let generation = loadGeneration
+        let offset = nextPageOffset
+        isLoadingNextPage = true
+
+        Task { [weak self] in
+            guard let self else { return }
+
+            do {
+                let page = try await DatabaseService.shared.fetchPage(offset: offset, limit: pageSize)
+                try Task.checkCancellation()
+                guard generation == loadGeneration, searchText.isEmpty else { return }
+
+                let existingIDs = Set(items.map(\.id))
+                let newItems = page.items.filter { !existingIDs.contains($0.id) }
+                items.append(contentsOf: newItems)
+                filteredItems = items
+                nextPageOffset = offset + page.items.count
+                hasMorePages = page.hasMore
+                isLoadingNextPage = false
+            } catch is CancellationError {
+                isLoadingNextPage = false
+            } catch {
+                guard generation == loadGeneration else { return }
+                errorMessage = error.localizedDescription
+                isLoadingNextPage = false
             }
         }
     }
@@ -115,19 +185,7 @@ class ClipboardHistoryViewModel: ObservableObject {
             loadItems()
             return
         }
-
-        isLoading = true
-
-        Task {
-            do {
-                let results = try await DatabaseService.shared.search(keyword: searchText)
-                self.items = results
-                self.isLoading = false
-            } catch {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
-            }
-        }
+        performSearch(for: searchText)
     }
 
     /// 选择项并复制到剪贴板
@@ -154,16 +212,20 @@ class ClipboardHistoryViewModel: ObservableObject {
 
     /// 切换置顶状态
     func togglePinned(_ item: ClipboardItem) {
-        do {
-            try DatabaseService.shared.updatePinned(id: item.id, isPinned: !item.isPinned)
-            loadItems()
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                try await DatabaseService.shared.updatePinned(id: item.id, isPinned: !item.isPinned)
+                loadItems()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
     /// 清空所有
     func clearAll() async {
+        searchTask?.cancel()
+        pageLoadTask?.cancel()
         isLoading = true
         errorMessage = nil
 
@@ -176,6 +238,15 @@ class ClipboardHistoryViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    /// 当前键盘选中项的稳定标识
+    var selectedItemID: String? {
+        guard let selectedItemIndex,
+              filteredItems.indices.contains(selectedItemIndex) else {
+            return nil
+        }
+        return filteredItems[selectedItemIndex].id
     }
 
     // MARK: - 键盘导航

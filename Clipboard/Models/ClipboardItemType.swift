@@ -8,7 +8,7 @@
 import AppKit
 import Foundation
 
-enum ClipboardItemType: String, Codable {
+enum ClipboardItemType: String, Codable, Sendable {
     case text
     case image
     case file

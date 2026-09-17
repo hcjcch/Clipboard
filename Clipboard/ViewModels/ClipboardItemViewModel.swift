@@ -5,20 +5,40 @@
 //  Created by huangchen.102 on 2025/12/30.
 //
 
+import AppKit
 import Foundation
 import SwiftUI
 
 @MainActor
 class ClipboardItemViewModel: ObservableObject {
+    private static let relativeDateFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
+
     let item: ClipboardItem
     private let onDelete: () -> Void
     let searchKeyword: String
+    let formattedTime: String
+    let highlightedPreview: AttributedString
+    let thumbnailImage: NSImage?
     var onCopySuccess: (() -> Void)?
 
     init(item: ClipboardItem, onDelete: @escaping () -> Void, searchKeyword: String = "") {
         self.item = item
         self.onDelete = onDelete
         self.searchKeyword = searchKeyword
+        self.formattedTime = Self.relativeDateFormatter.localizedString(
+            for: item.createdAt,
+            relativeTo: Date()
+        )
+        self.highlightedPreview = TextHighlighter.highlightedPreview(
+            item.content,
+            keyword: searchKeyword,
+            maxLength: 200
+        )
+        self.thumbnailImage = item.thumbnailData.flatMap(NSImage.init(data:))
     }
 
     /// 复制到剪贴板
@@ -47,24 +67,8 @@ class ClipboardItemViewModel: ObservableObject {
         }
     }
 
-    /// 格式化创建时间
-    var formattedTime: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: item.createdAt, relativeTo: Date())
-    }
-
     /// 预览文本
     var previewText: String {
         item.previewText
-    }
-
-    /// 高亮预览文本
-    var highlightedPreview: AttributedString {
-        TextHighlighter.highlightedPreview(
-            item.content,
-            keyword: searchKeyword,
-            maxLength: 200
-        )
     }
 }
